@@ -50,10 +50,15 @@ class MainWindow:
         # Game state
         self.running = True
         self.auto_mode = False
-        self.is_processing = False
         self.log_viewer_open = False
         self.log_viewer = LogViewer()
         self.nations_scroll_offset = 0
+
+        # Async turn execution
+        from ..game.async_turn_executor import AsyncTurnExecutor
+        self.turn_executor = AsyncTurnExecutor(self.controller)
+        self.turn_executor.on_turn_complete = self._on_turn_complete
+        self.turn_executor.start()
 
         # Load flag images
         self.flag_images = self._load_flag_images()
@@ -192,25 +197,23 @@ class MainWindow:
         self.btn_auto.text = f"Auto: {'ON' if self.auto_mode else 'OFF'}"
 
     def _next_turn(self) -> None:
-        """Execute next turn."""
-        if not self.is_processing:
-            self.is_processing = True
+        """Execute next turn asynchronously."""
+        if not self.turn_executor.status.is_busy():
             print(f"\n{'='*60}")
-            print(f"Executing Turn {self.controller.game_state.turn_number}")
+            print(f"Queuing Turn {self.controller.game_state.turn_number}")
             print(f"{'='*60}")
-            try:
-                self.controller.execute_turn()
-            except Exception as e:
-                print(f"ERROR during turn execution: {e}")
-                import traceback
-                traceback.print_exc()
-            finally:
-                self.is_processing = False
-                print(f"Turn {self.controller.game_state.turn_number} complete\n")
+            self.turn_executor.execute_turn_async()
+
+    def _on_turn_complete(self) -> None:
+        """Called when turn execution completes."""
+        print(f"Turn {self.controller.game_state.turn_number} complete\n")
 
     def _toggle_log_viewer(self) -> None:
         """Toggle log viewer window."""
         self.log_viewer_open = not self.log_viewer_open
+        # Reset selection when opening the viewer (will default to newest log)
+        if self.log_viewer_open:
+            self.log_viewer.selected_log_id = None
 
     def handle_events(self) -> None:
         """Handle pygame events."""
@@ -255,10 +258,11 @@ class MainWindow:
     def update(self) -> None:
         """Update game state."""
         # Update button states
-        self.btn_next_turn.enabled = not self.is_processing and not self.auto_mode
+        is_busy = self.turn_executor.status.is_busy()
+        self.btn_next_turn.enabled = not is_busy and not self.auto_mode
 
         # Auto mode processing
-        if self.auto_mode and not self.is_processing:
+        if self.auto_mode and not is_busy:
             self._next_turn()
 
     def draw(self) -> None:
@@ -403,10 +407,38 @@ class MainWindow:
 
         y += 40
 
-        # Status
-        if self.is_processing:
-            status_text = "AI is thinking..."
-            text = self.font_small.render(status_text, True, colors.WARNING)
+        # Status - show what's happening
+        if self.turn_executor.status.is_busy():
+            status_text = self.turn_executor.status.get_action()
+            if status_text:
+                # Wrap long text
+                max_width = self.panel_current.rect.width - 20
+                words = status_text.split()
+                lines = []
+                current_line = []
+
+                for word in words:
+                    test_line = ' '.join(current_line + [word])
+                    test_surface = self.font_small.render(test_line, True, colors.WARNING)
+                    if test_surface.get_width() <= max_width:
+                        current_line.append(word)
+                    else:
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        current_line = [word]
+
+                if current_line:
+                    lines.append(' '.join(current_line))
+
+                for line in lines[:3]:  # Max 3 lines
+                    text = self.font_small.render(line, True, colors.WARNING)
+                    self.screen.blit(text, (x, y))
+                    y += 25
+
+        # Show error if any
+        error = self.turn_executor.status.get_error()
+        if error:
+            text = self.font_small.render(f"Error: {error[:50]}", True, colors.ERROR)
             self.screen.blit(text, (x, y))
 
     def _draw_resources(self) -> None:
@@ -512,10 +544,13 @@ class MainWindow:
 
     def run(self) -> None:
         """Main game loop."""
-        while self.running:
-            self.handle_events()
-            self.update()
-            self.draw()
-            self.clock.tick(self.fps)
-
-        pygame.quit()
+        try:
+            while self.running:
+                self.handle_events()
+                self.update()
+                self.draw()
+                self.clock.tick(self.fps)
+        finally:
+            # Clean up async executor
+            self.turn_executor.stop()
+            pygame.quit()

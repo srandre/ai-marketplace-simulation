@@ -3,8 +3,8 @@
 from typing import Dict, List
 
 from ..ai.decision_maker import DecisionMaker
-from ..models.enums import GeneratorType, LogType
-from ..models.transaction import Transaction
+from ..models.enums import GeneratorType, LogType, ResourceType
+from ..models.transaction import Transaction, TradeOffer
 from .building import BuildingManager
 from .game_state import GameState
 from .trading import TradingManager
@@ -36,18 +36,39 @@ class GameController:
         # Start turn (resource generation, era advancement)
         self.turn_manager.start_turn(current_nation.id)
 
-        # Get available actions
-        available_actions = self._get_available_actions()
+        # Get AI decision for ALL actions at once
+        era_reqs = self.game_state.get_era_advancement_requirements(current_nation.era)
+        era_reqs_dict = {k.value: v for k, v in era_reqs.items()} if era_reqs else {}
+        game_state_summary = self._build_game_state_summary()
 
-        # Execute AI actions
-        print(f"Phase 1: SELL action")
-        self._execute_sell_action(current_nation.id, available_actions)
+        print(f"Making AI decision for all actions...")
+        decision, prompt, response = self.decision_maker.decide_all_actions(
+            current_nation, game_state_summary, era_reqs_dict
+        )
 
-        print(f"Phase 2: BUY action")
-        self._execute_buy_action()
+        # Log the AI decision
+        log_entry = self.game_state.game_log.add_entry(
+            log_type=LogType.AI_DECISION,
+            turn_number=self.game_state.turn_number,
+            summary=f"{current_nation.name} planning turn actions",
+            nations_involved=[current_nation.id],
+            details={"decision": decision},
+        )
+        log_entry.add_ai_decision(current_nation.id, prompt, response)
 
-        print(f"Phase 3: BUILD action")
-        self._execute_build_action(current_nation.id, available_actions)
+        # Execute the planned actions
+        actions = decision.get("actions", [])
+        print(f"Executing {len(actions)} actions...")
+
+        # Execute TRADE actions first
+        for action in actions:
+            if action.get("type") == "TRADE":
+                self._execute_trade_action(current_nation, action)
+
+        # Then execute BUILD actions
+        for action in actions:
+            if action.get("type") == "BUILD":
+                self._execute_build_from_plan(current_nation, action)
 
         # End turn
         self.turn_manager.end_turn()
@@ -81,9 +102,14 @@ class GameController:
             blueprint = self.game_state.generator_manager.get_blueprint(gen_type)
             if blueprint:
                 cost = blueprint.get_current_cost(count)
-                generator_costs[gen_type.value] = {
+                cost_info = {
                     k.value: v for k, v in cost.items()
                 }
+                # Add base_cost_any if applicable (e.g., Farm)
+                if blueprint.base_cost_any is not None:
+                    required = blueprint.base_cost_any * (count + 1)
+                    cost_info["cost_any_resource"] = required
+                generator_costs[gen_type.value] = cost_info
 
         return {
             "nations": nations_summary,
@@ -117,7 +143,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
-            summary=f"{nation.name} AI deciding on SELL action",
+            summary=f"{nation.name} AI decided on {decision.get("action")} action",
             nations_involved=[nation_id],
             details={"action_type": "SELL"},
         )
@@ -158,7 +184,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
-            summary=f"{nation.name} AI deciding on BUILD action",
+            summary=f"{nation.name} AI decided on BUILD action",
             nations_involved=[nation_id],
             details={"action_type": "BUILD"},
         )
@@ -274,6 +300,61 @@ class GameController:
         """Process a build decision from AI."""
         details = decision.get("details", {})
         gen_type_str = details.get("generator_type")
+
+        if not gen_type_str:
+            return
+
+        try:
+            generator_type = GeneratorType[gen_type_str.upper()]
+            self.building_manager.build_generator(nation, generator_type)
+        except (KeyError, ValueError):
+            pass
+
+    def _execute_trade_action(self, nation, action: Dict) -> None:
+        """Execute a trade action from the combined turn plan."""
+        target_id = action.get("target_nation_id")
+        if target_id is None:
+            return
+
+        # Parse trade offer
+        offering_dict = action.get("offering", {})
+        requesting_dict = action.get("requesting", {})
+
+        offering = {}
+        requesting = {}
+
+        for resource_str, amount in offering_dict.items():
+            try:
+                resource_type = ResourceType[resource_str.upper()]
+                offering[resource_type] = int(amount)
+            except (KeyError, ValueError):
+                continue
+
+        for resource_str, amount in requesting_dict.items():
+            try:
+                resource_type = ResourceType[resource_str.upper()]
+                requesting[resource_type] = int(amount)
+            except (KeyError, ValueError):
+                continue
+
+        trade_offer = TradeOffer(offering=offering, requesting=requesting)
+
+        if not trade_offer.is_valid():
+            print(f"Invalid trade offer from {nation.name}")
+            return
+
+        # Propose trade
+        transaction = self.trading_manager.propose_trade(
+            nation.id, target_id, trade_offer
+        )
+
+        if transaction:
+            # Ask target nation to respond
+            self._process_trade_response(transaction)
+
+    def _execute_build_from_plan(self, nation, action: Dict) -> None:
+        """Execute a build action from the combined turn plan."""
+        gen_type_str = action.get("generator_type")
 
         if not gen_type_str:
             return

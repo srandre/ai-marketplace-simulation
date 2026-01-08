@@ -26,7 +26,7 @@ class TurnManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.TURN_START,
             turn_number=self.game_state.turn_number,
-            summary=f"{nation.name} {nation.name} begins their turn",
+            summary=f"{nation.name} begins their turn",
             nations_involved=[nation_id],
         )
 
@@ -73,7 +73,7 @@ class TurnManager:
             self.game_state.game_log.add_entry(
                 log_type=LogType.ERA_ADVANCEMENT,
                 turn_number=self.game_state.turn_number,
-                summary=f"{nation.name} {nation.name} advanced to {nation.era.name}!",
+                summary=f"{nation.name} advanced to {nation.era.name}!",
                 nations_involved=[nation.id],
                 details={
                     "old_era": old_era.value,

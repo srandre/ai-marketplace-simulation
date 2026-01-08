@@ -14,10 +14,41 @@ class TradeOffer(BaseModel):
     requesting: Dict[ResourceType, int] = Field(default_factory=dict)  # What they want
 
     def is_valid(self) -> bool:
-        """Check if the offer has both offering and requesting items."""
+        """
+        Check if the offer is valid.
+
+        Rules:
+        - Must have both offering and requesting items
+        - One side must have ONLY gold
+        - The other side must have resources (but NOT gold)
+        """
         has_offering = any(amount > 0 for amount in self.offering.values())
         has_requesting = any(amount > 0 for amount in self.requesting.values())
-        return has_offering and has_requesting
+
+        if not (has_offering and has_requesting):
+            return False
+
+        # Check gold-only rule
+        offering_resources = [rt for rt, amt in self.offering.items() if amt > 0]
+        requesting_resources = [rt for rt, amt in self.requesting.items() if amt > 0]
+
+        # One side must be ONLY gold
+        offering_is_only_gold = (len(offering_resources) == 1 and
+                                  offering_resources[0] == ResourceType.GOLD)
+        requesting_is_only_gold = (len(requesting_resources) == 1 and
+                                    requesting_resources[0] == ResourceType.GOLD)
+
+        # The other side must NOT contain gold
+        offering_has_gold = ResourceType.GOLD in offering_resources
+        requesting_has_gold = ResourceType.GOLD in requesting_resources
+
+        # Valid if one side is only gold and the other doesn't have gold
+        if offering_is_only_gold and not requesting_has_gold:
+            return True
+        if requesting_is_only_gold and not offering_has_gold:
+            return True
+
+        return False
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for serialization."""

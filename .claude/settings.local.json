@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(if not exist \"README.md\" echo .)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(python:*)"
     ]
   }
 }

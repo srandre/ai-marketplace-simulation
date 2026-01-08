@@ -29,6 +29,8 @@ class TradingManager:
             return None
 
         if not offer.is_valid():
+            # Log why the trade was invalid
+            print(f"Invalid trade offer from {initiator.name}: Trade must have one side with ONLY gold and the other side with NO gold")
             return None
 
         # Check if initiator has the resources they're offering
@@ -189,7 +191,7 @@ class TradingManager:
             return False, "Responder nation not found"
 
         if not counter_offer.is_valid():
-            return False, "Invalid counter-offer"
+            return False, "Invalid counter-offer: Trade must have one side with ONLY gold and the other side with NO gold"
 
         # Check if responder has resources for counter-offer
         if not responder.inventory.has_multiple(counter_offer.offering):
