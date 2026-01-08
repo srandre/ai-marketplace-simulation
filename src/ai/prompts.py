@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 def create_system_prompt(generator_manager: "GeneratorManager") -> str:
     """Create the system prompt that defines the AI's role with dynamic generator costs from config."""
+    from ..utils.config import config
 
     # Build generator descriptions from config
     generator_descriptions = []
@@ -35,16 +36,87 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
 
     generators_text = "\n".join(generator_descriptions)
 
+    # Dynamically build era information from config
+    eras_config = config.get("eras", [])
+    eras_sorted = sorted(eras_config, key=lambda e: e.get("index", 0))
+
+    # Build era list
+    era_list = ", ".join([f"{e.get('name')} ({e.get('index')})" for e in eras_sorted])
+
+    # Build resource unlocking section
+    resource_unlocking_lines = []
+    for era in eras_sorted:
+        era_idx = era.get("index")
+        era_name_short = era.get("name", "").replace("Era of ", "")
+        unlocked = era.get("unlocked_resources", [])
+
+        # Get emoji mapping
+        resource_emojis = {
+            "GOLD": "💰", "WOOD": "🪵", "STONE": "🪨",
+            "FOOD": "🌾", "TECHNOLOGY": "⚙️", "INFORMATION": "💾"
+        }
+
+        if era_idx == 0:
+            # First era - list all resources
+            resource_text = ", ".join([r for r in unlocked])
+        else:
+            # Subsequent eras - show what's newly unlocked
+            prev_era = eras_sorted[era_idx - 1] if era_idx > 0 else {"unlocked_resources": []}
+            prev_unlocked = set(prev_era.get("unlocked_resources", []))
+            new_resources = [r for r in unlocked if r not in prev_unlocked]
+
+            if new_resources:
+                resource_text = "+ " + ", ".join([f"{r} ({resource_emojis.get(r, '❓')})" for r in new_resources])
+            else:
+                resource_text = "All resources"
+
+        resource_unlocking_lines.append(f"- Era {era_idx} ({era_name_short}): {resource_text}")
+
+    resource_unlocking_text = "\n".join(resource_unlocking_lines)
+
+    # Build era advancement requirements dynamically
+    advancement_lines = []
+    for i, era in enumerate(eras_sorted[:-1]):  # Exclude last era (no advancement from final era)
+        next_era = eras_sorted[i + 1]
+        requirements_key = f"era_advancement.era_{next_era.get('index')}_requirements"
+        reqs = config.get(requirements_key, {})
+
+        if reqs:
+            reqs_text = ", ".join([f"{v} {k}" for k, v in reqs.items()])
+            era_name_short = era.get("name", "").replace("Era of ", "")
+            next_era_name_short = next_era.get("name", "").replace("Era of ", "")
+
+            # Mark final era as WIN
+            win_suffix = " = WIN" if i + 1 == len(eras_sorted) - 1 else ""
+            advancement_lines.append(
+                f"- Era {era.get('index')} → Era {next_era.get('index')} ({next_era_name_short}{win_suffix}): {reqs_text}"
+            )
+
+    advancement_text = "\n".join(advancement_lines)
+
+    # Get final era name for the win condition text
+    final_era_name = eras_sorted[-1].get("name", "final era") if eras_sorted else "final era"
+
     return f"""You are an AI controlling a nation in a strategic resource management game.
 
 Your goal is to advance through the eras by collecting resources and building generators.
 
 GAME RULES:
-- There are 4 eras: Era of Origin (0), Era of Structuring (1), Era of Information (2) and Era of Domination (3)
+- There are {len(eras_sorted)} eras: {era_list}
 - You advance eras automatically when you have enough resources at turn start
-- Each era unlocks new resources and multiplies generation by 10x
-- Advancing to Era of Domination guarantees your victory immediately
+- Each era unlocks new resources and multiplies generation significantly
+- Advancing to {final_era_name} guarantees your victory immediately
 - Resources: Gold (💰), Wood (🪵), Stone (🪨), Food (🌾), Technology (⚙️), Information (💾)
+
+RESOURCE UNLOCKING BY ERA:
+{resource_unlocking_text}
+
+⚠️ CRITICAL TRADING RULE: You can ONLY trade resources that BOTH you AND your trading partner have unlocked!
+- Example: If you're in a later era and they're in an earlier era, you CANNOT trade advanced resources with them
+- Always check the target nation's era before proposing a trade involving advanced resources
+
+ERA ADVANCEMENT REQUIREMENTS (you advance automatically at turn start when you have these):
+{advancement_text}
 
 GENERATORS (base costs):
 {generators_text}
@@ -166,8 +238,14 @@ def create_trading_phase_prompt(
         strategy_note = "You can strategize: for example, sell resources you have for gold, then buy different resources with that gold."
     else:
         phase_text = "TRADING PHASE - Second Trade Opportunity (1 trade remaining)"
-        instruction = "You completed one trade. You can propose ONE final trade to any nation (same or different), or skip."
-        strategy_note = "This is your last trade opportunity this turn. Use it wisely!"
+        instruction = """⚠️ IMPORTANT: Check your memory! You just completed a trade THIS TURN.
+DO NOT contradict your previous trade:
+- If you just SOLD a resource, DON'T buy it back immediately (wasteful!)
+- If you just BOUGHT a resource, DON'T sell it back immediately (wasteful!)
+- Your second trade should COMPLEMENT your first trade, not undo it
+
+You can propose ONE final trade to any nation (same or different), or skip."""
+        strategy_note = "This is your last trade opportunity this turn. Make it count and ensure it aligns with your first trade's strategy!"
 
     # Add memory context
     memory_context = _format_memory_context(nation)
@@ -181,23 +259,46 @@ GAME STATE:
 
 {instruction}
 
-TRADING RULES (CRITICAL):
-- One side offers ONLY GOLD (nothing else)
-- The other side offers resources (NO GOLD at all)
-- Before proposing a buy offer, verify the target nation HAS the resources you want. Otherwise, it will be invalid and you will waste an opportunity.
-- Before proposing a sell offer, verify the target nation HAS the amount of gold you want. Otherwise, it will be invalid and you will waste an opportunity.
-- Examples:
-  ✓ You offer 100 GOLD, request 50 WOOD + 30 STONE
-  ✓ You offer 50 WOOD + 30 STONE, request 100 GOLD
-  ✗ You offer 100 GOLD + 10 WOOD (mixing gold with resources)
-  ✗ Both sides have resources but no gold
+⚠️ CRITICAL TRADING RULES - READ CAREFULLY ⚠️
+
+1. GOLD-ONLY RULE (MANDATORY):
+   - One side offers ONLY GOLD (nothing else)
+   - The other side offers ONLY RESOURCES (NO GOLD at all)
+   - Examples:
+     ✓ VALID: You offer {{"GOLD": 100}}, request {{"WOOD": 50, "STONE": 30}}
+     ✓ VALID: You offer {{"WOOD": 50, "STONE": 30}}, request {{"GOLD": 100}}
+     ✗ INVALID: You offer {{"GOLD": 100, "WOOD": 10}} (mixing gold with resources)
+     ✗ INVALID: Both sides have resources but no gold
+
+2. VERIFY TARGET NATION HAS WHAT YOU REQUEST (MANDATORY):
+   ⚠️ BEFORE proposing a trade, CHECK the "other_nations" data above!
+
+   If you want to BUY resources from a nation:
+   - You offer: {{"GOLD": X}}
+   - You request: {{"WOOD": Y, "STONE": Z}}
+   - ⚠️ CHECK: Does the target nation have AT LEAST Y WOOD and Z STONE in their "resources"?
+   - If NO → DO NOT propose this trade! It will fail and waste your opportunity!
+
+   If you want to SELL resources for gold:
+   - You offer: {{"WOOD": Y, "STONE": Z}}
+   - You request: {{"GOLD": X}}
+   - ⚠️ CHECK: Does the target nation have AT LEAST X GOLD in their "resources"?
+   - If NO → DO NOT propose this trade! It will fail and waste your opportunity!
+
+3. NEVER propose to a nation that rejected you before (check your memory)
 
 STRATEGY:
-- Check what resources you need for era advancement
-- Consider which nations have those resources
-- Think about fair pricing (resources are valuable)
-- Remember your relationships with other nations
+- First, identify what resources you NEED for your goals
+- Then, find which nations HAVE those resources (check "other_nations" resources)
+- Only propose to nations that can fulfill your request
 - {strategy_note}
+
+⚠️ BEFORE RESPONDING, COMPLETE THIS VERIFICATION CHECKLIST:
+
+Step 1: What do I need? (Check your resources vs era requirements)
+Step 2: Who has what I need? (Check "other_nations" resources carefully)
+Step 3: Can they afford my request? (If I'm buying, do they have resources? If I'm selling, do they have gold?)
+Step 4: Is this trade valid? (One side gold only, other side resources only)
 
 Respond with JSON:
 {{
@@ -205,11 +306,20 @@ Respond with JSON:
     "target_nation_id": <nation_id or null>,
     "offering": {{"GOLD": 100}} or {{"WOOD": 50, "STONE": 30}},
     "requesting": {{"WOOD": 50, "STONE": 30}} or {{"GOLD": 100}},
-    "reasoning": "brief explanation (max 150 chars)"
+    "reasoning": "Step 3 verification: Target nation has [X GOLD / Y WOOD, Z STONE]. [Why this trade makes sense]"
 }}
 
-If you don't want to trade, set trade: false and leave other fields null/empty.
-If you want to trade, set trade: true and fill in all fields."""
+⚠️ Your reasoning MUST start by stating what the target nation HAS, then explain the trade logic.
+
+Examples of GOOD reasoning:
+- "Target has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings"
+- "Target has 80 WOOD and 60 STONE. I'll buy 50 WOOD with 100 GOLD to advance era"
+
+Examples of BAD reasoning (NEVER do this):
+- "Egypt has wood but no gold, so I'll sell stone for gold" ← WRONG! They have no gold!
+- "I need resources so I'll trade" ← Didn't verify target has what I want!
+
+If you don't want to trade, set trade: false and leave other fields null/empty."""
 
     return prompt
 

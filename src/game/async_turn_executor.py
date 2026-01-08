@@ -169,15 +169,19 @@ class AsyncTurnExecutor:
 
                         # Update memory with outcome
                         if current_nation.memory:
-                            current_nation.memory[-1].outcome = f"Trade {result.lower()} by {target_nation.name}"
+                            current_nation.memory[-1].outcome = f"Trade {result.lower()} - {target_nation.name}"
 
                         if result == "ACCEPTED":
                             trades_completed += 1
                             trade_summaries.append(f"traded with {target_nation.name}")
+                        elif result == "INVALID":
+                            # Invalid trade (target lacks resources) - NO RETRY allowed
+                            trade_summaries.append(f"trade failed: {target_nation.name} lacks resources")
+                            print(f"[WARNING] {current_nation.name} proposed invalid trade to {target_nation.name} (lacks resources)")
                         elif result == "REJECTED":
                             trade_summaries.append(f"trade rejected by {target_nation.name}")
 
-                            # Allow one retry with a different (or same) partner
+                            # Allow one retry with a different partner ONLY for rejected trades
                             self.status.set_action(f"{current_nation.name} seeking alternative trade partner...")
                             retry_trade = self.controller._request_alternative_trade(current_nation, trade_action)
 

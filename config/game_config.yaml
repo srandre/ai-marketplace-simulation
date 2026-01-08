@@ -3,8 +3,7 @@
 game:
   num_players: 10
   initial_turn_number: 1
-  initial_era: 1  # Starting era for all players (0=Origin, 1=Structuring, 2=Information)
-  auto_mode_delay_ms: 1000  # Delay between auto turns in milliseconds
+  initial_era: 0  # Starting era for all players (0=Origin, 1=Structuring, 2=Information)
 
 eras:
   - name: "Era of Origin"
@@ -15,9 +14,9 @@ eras:
       - STONE
       - FOOD
     generation_multiplier: 1
-    base_generation: 10
+    base_generation: 50
 
-  - name: "Era of Structuring"
+  - name: "Era of Industry"
     index: 1
     unlocked_resources:
       - GOLD
@@ -26,7 +25,7 @@ eras:
       - FOOD
       - TECHNOLOGY
     generation_multiplier: 10
-    base_generation: 100
+    base_generation: 500
 
   - name: "Era of Information"
     index: 2
@@ -38,7 +37,7 @@ eras:
       - TECHNOLOGY
       - INFORMATION
     generation_multiplier: 100
-    base_generation: 1000
+    base_generation: 5000
 
   - name: "Era of Domination"
     index: 3
@@ -50,7 +49,7 @@ eras:
       - TECHNOLOGY
       - INFORMATION
     generation_multiplier: 1000
-    base_generation: 10000
+    base_generation: 50000
 
 resources:
   GOLD:

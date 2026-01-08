@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 from pydantic import BaseModel, Field
 
 from .enums import GeneratorType, ResourceType
+from ..utils.config import config
 
 if TYPE_CHECKING:
     from .resource import ResourceInventory
@@ -100,19 +101,19 @@ class GeneratorManager:
         if blueprint is None:
             return None
 
-        # Calculate generation amount based on era
-        era_configs = [
-            {"base": 10, "multiplier": 1},      # Era 0
-            {"base": 100, "multiplier": 10},    # Era 1
-            {"base": 1000, "multiplier": 100},  # Era 2
-        ]
+        # Get base generation from config based on era
+        eras_config = config.get("eras", [])
+        base_generation = 10  # Default fallback
 
-        era_config = era_configs[min(era_index, len(era_configs) - 1)]
+        for era_cfg in eras_config:
+            if era_cfg.get("index") == era_index:
+                base_generation = era_cfg.get("base_generation", 10)
+                break
 
         return Generator(
             generator_type=generator_type,
             produces=blueprint.produces,
-            generation_amount=era_config["base"],
+            generation_amount=base_generation,
             required_era=blueprint.required_era,
         )
 

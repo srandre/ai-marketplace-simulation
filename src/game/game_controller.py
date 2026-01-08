@@ -211,9 +211,30 @@ class GameController:
             print(f"Invalid trade offer from {nation.name}")
             return "INVALID"
 
-        # Check if target has the requested resources
+        # Check if both nations have unlocked the resources being traded
         target_nation = self.game_state.get_nation(target_id)
         if target_nation:
+            from ..utils.resource_metadata import is_resource_unlocked_in_era
+
+            # Check offering resources (must be unlocked for both nations)
+            for resource_type in offering.keys():
+                if not is_resource_unlocked_in_era(resource_type, nation.era):
+                    print(f"[TRADE BLOCKED] {nation.name} hasn't unlocked {resource_type.value} (Era {nation.era.name})")
+                    return "INVALID"
+                if not is_resource_unlocked_in_era(resource_type, target_nation.era):
+                    print(f"[TRADE BLOCKED] {target_nation.name} hasn't unlocked {resource_type.value} (Era {target_nation.era.name})")
+                    return "INVALID"
+
+            # Check requesting resources (must be unlocked for both nations)
+            for resource_type in requesting.keys():
+                if not is_resource_unlocked_in_era(resource_type, nation.era):
+                    print(f"[TRADE BLOCKED] {nation.name} hasn't unlocked {resource_type.value} (Era {nation.era.name})")
+                    return "INVALID"
+                if not is_resource_unlocked_in_era(resource_type, target_nation.era):
+                    print(f"[TRADE BLOCKED] {target_nation.name} hasn't unlocked {resource_type.value} (Era {target_nation.era.name})")
+                    return "INVALID"
+
+            # Check if target has the requested resources
             for resource_type, amount in requesting.items():
                 if not target_nation.inventory.has(resource_type, amount):
                     # Log the failed trade attempt

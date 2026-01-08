@@ -1,36 +1,47 @@
 """Shared resource display utilities including emoji mappings."""
 
 from ..models.enums import ResourceType, GeneratorType
+from ..utils.config import config
 
-# Resource emoji mappings
-RESOURCE_EMOJIS = {
-    ResourceType.GOLD: "💰",
-    ResourceType.WOOD: "🪵",
-    ResourceType.STONE: "🪨",
-    ResourceType.FOOD: "🌾",
-    ResourceType.TECHNOLOGY: "⚙️",
-    ResourceType.INFORMATION: "💾",
-}
 
-# String-based resource emoji mappings (for when we only have the string value)
-RESOURCE_EMOJIS_STR = {
-    "GOLD": "💰",
-    "WOOD": "🪵",
-    "STONE": "🪨",
-    "FOOD": "🌾",
-    "TECHNOLOGY": "⚙️",
-    "INFORMATION": "💾",
-}
+def _load_resource_emojis():
+    """Load resource emojis from config."""
+    emojis = {}
+    emojis_str = {}
 
-# Generator emoji mappings
-GENERATOR_EMOJIS = {
-    GeneratorType.LUMBER_CAMP: "🪵",
-    GeneratorType.QUARRY: "🪨",
-    GeneratorType.FARM: "🌾",
-    GeneratorType.MINE: "💰",
-    GeneratorType.FACTORY: "⚙️",
-    GeneratorType.DATACENTER: "💾",
-}
+    for resource_type in ResourceType:
+        resource_config = config.get(f"resources.{resource_type.value}", {})
+        symbol = resource_config.get("symbol", "❓")
+        emojis[resource_type] = symbol
+        emojis_str[resource_type.value] = symbol
+
+    return emojis, emojis_str
+
+
+# Resource emoji mappings loaded from config
+RESOURCE_EMOJIS, RESOURCE_EMOJIS_STR = _load_resource_emojis()
+
+# Generator emoji mappings (loaded dynamically from generator blueprints)
+def _load_generator_emojis():
+    """Load generator emojis based on what they produce."""
+    # Map generators to the resources they produce
+    generator_to_resource = {
+        GeneratorType.MINE: ResourceType.GOLD,
+        GeneratorType.LUMBER_CAMP: ResourceType.WOOD,
+        GeneratorType.QUARRY: ResourceType.STONE,
+        GeneratorType.FARM: ResourceType.FOOD,
+        GeneratorType.FACTORY: ResourceType.TECHNOLOGY,
+        GeneratorType.DATACENTER: ResourceType.INFORMATION,
+    }
+
+    emojis = {}
+    for gen_type, resource_type in generator_to_resource.items():
+        emojis[gen_type] = RESOURCE_EMOJIS.get(resource_type, "❓")
+
+    return emojis
+
+
+GENERATOR_EMOJIS = _load_generator_emojis()
 
 
 def get_resource_emoji(resource_type: ResourceType) -> str:

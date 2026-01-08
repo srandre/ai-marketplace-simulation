@@ -29,7 +29,7 @@ class Era(Enum):
     """Game eras."""
 
     ORIGIN = 0
-    STRUCTURING = 1
+    INDUSTRIAL = 1
     INFORMATION = 2
     DOMINATION = 3
 

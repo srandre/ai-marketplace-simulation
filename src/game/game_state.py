@@ -27,7 +27,7 @@ class GameState(BaseModel):
     transaction_history: TransactionHistory = Field(default_factory=TransactionHistory)
     game_log: GameLog = Field(default_factory=GameLog)
     is_initialized: bool = Field(default=False)
-    winner_nation_id: Optional[int] = Field(default=None)  # Set when a nation reaches Era of Domination
+    winner_nation_id: Optional[int] = Field(default=None)  # Set when a nation reaches the final era
     game_over: bool = Field(default=False)
 
     def initialize_game(self) -> None:
@@ -68,6 +68,9 @@ class GameState(BaseModel):
         initial_era_index = config.get("game.initial_era", 0)
         initial_era = Era(initial_era_index)
 
+        # Get initial relationship score from config
+        initial_relationship = config.get("diplomacy.initial_relationship", 0)
+
         for i, nation_data in enumerate(selected_nations):
             nation = Nation(
                 id=i,
@@ -85,6 +88,12 @@ class GameState(BaseModel):
                 self._increment_generator_count(generator_type)
 
             self.nations.append(nation)
+
+        # Initialize relationships between all nations
+        for nation in self.nations:
+            for other_nation in self.nations:
+                if nation.id != other_nation.id:
+                    nation.relationships[other_nation.id] = initial_relationship
 
         # Randomize turn order
         self.turn_order = list(range(len(self.nations)))
@@ -170,16 +179,21 @@ class GameState(BaseModel):
         return {}
 
     def get_era_advancement_requirements(self, current_era: Era) -> Optional[Dict[ResourceType, int]]:
-        """Get resource requirements to advance from current era."""
-        if current_era == Era.ORIGIN:
-            reqs = config.get("era_advancement.era_1_requirements", {})
-        elif current_era == Era.STRUCTURING:
-            reqs = config.get("era_advancement.era_2_requirements", {})
-        elif current_era == Era.INFORMATION:
-            reqs = config.get("era_advancement.era_3_requirements", {})
-        elif current_era == Era.DOMINATION:
-            return None  # Max era reached
-        else:
+        """Get resource requirements to advance from current era, dynamically from config."""
+        # Get all eras from config to determine max era
+        eras_config = config.get("eras", [])
+        max_era_index = max((e.get("index", 0) for e in eras_config), default=0)
+
+        # If already at max era, return None
+        if current_era.value >= max_era_index:
+            return None
+
+        # Build the config key dynamically: era_advancement.era_{next_index}_requirements
+        next_era_index = current_era.value + 1
+        requirements_key = f"era_advancement.era_{next_era_index}_requirements"
+        reqs = config.get(requirements_key, {})
+
+        if not reqs:
             return None
 
         # Convert string keys to ResourceType

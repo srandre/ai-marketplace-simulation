@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from .enums import Era, GeneratorType, ResourceType
 from .generator import Generator
 from .resource import ResourceInventory
+from ..utils.config import config
 
 
 class DecisionMemory(BaseModel):
@@ -62,16 +63,25 @@ class Nation(BaseModel):
         return self.inventory.has_multiple(requirements)
 
     def advance_era(self) -> bool:
-        """Advance to the next era if possible."""
-        if self.era == Era.ORIGIN:
-            self.era = Era.STRUCTURING
-            return True
-        elif self.era == Era.STRUCTURING:
-            self.era = Era.INFORMATION
-            return True
-        elif self.era == Era.INFORMATION:
-            self.era = Era.DOMINATION
-            return True
+        """Advance to the next era if possible, based on config."""
+        # Get all eras from config, sorted by index
+        eras_config = config.get("eras", [])
+        eras_sorted = sorted(eras_config, key=lambda e: e.get("index", 0))
+
+        # Find current era index
+        current_index = self.era.value
+
+        # Find next era
+        for era_cfg in eras_sorted:
+            if era_cfg.get("index") == current_index + 1:
+                # Found the next era
+                try:
+                    self.era = Era(era_cfg.get("index"))
+                    return True
+                except ValueError:
+                    return False
+
+        # No next era available
         return False
 
     def get_relationship(self, nation_id: int) -> int:
