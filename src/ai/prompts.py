@@ -300,24 +300,34 @@ Step 2: Who has what I need? (Check "other_nations" resources carefully)
 Step 3: Can they afford my request? (If I'm buying, do they have resources? If I'm selling, do they have gold?)
 Step 4: Is this trade valid? (One side gold only, other side resources only)
 
+⚠️ CRITICAL: Your JSON response MUST match your reasoning!
+- If your reasoning says "trade is invalid", then trade MUST be false
+- If your reasoning says "I will skip trading", then trade MUST be false
+- If your reasoning says "I will trade with X", then trade MUST be true and target_nation_id MUST be X
+- DO NOT write one thing in reasoning and different thing in JSON!
+
 Respond with JSON:
 {{
     "trade": true/false,
     "target_nation_id": <nation_id or null>,
     "offering": {{"GOLD": 100}} or {{"WOOD": 50, "STONE": 30}},
     "requesting": {{"WOOD": 50, "STONE": 30}} or {{"GOLD": 100}},
-    "reasoning": "Target nation has [X GOLD / Y WOOD, Z STONE]. [Why this trade makes sense]"
+    "reasoning": "Target nation [NAME] has [X GOLD / Y WOOD, Z STONE]. [Explanation]. Therefore, I will [trade/skip]."
 }}
 
-⚠️ Your reasoning MUST start by stating what the target nation HAS, then explain the trade logic.
+⚠️ Your reasoning MUST:
+1. Start by stating what the target nation HAS
+2. End with "Therefore, I will trade with [NAME]" or "Therefore, I will skip trading"
 
 Examples of GOOD reasoning:
-- "Target has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings"
-- "Target has 80 WOOD and 60 STONE. I'll buy 50 WOOD with 100 GOLD to advance era"
+- "Norway has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings. Therefore, I will trade with Norway."
+- "Egypt has 80 WOOD and 60 STONE. I'll buy 50 WOOD with 100 GOLD to advance era. Therefore, I will trade with Egypt."
+- "Norway has 0 GOLD, so I cannot sell resources to them. Therefore, I will skip trading."
 
 Examples of BAD reasoning (NEVER do this):
 - "Egypt has wood but no gold, so I'll sell stone for gold" ← WRONG! They have no gold!
 - "I need resources so I'll trade" ← Didn't verify target has what I want!
+- Reasoning says "invalid" but JSON has trade: true ← WRONG! Must match!
 
 If you don't want to trade, set trade: false and leave other fields null/empty."""
 
@@ -372,16 +382,27 @@ STRATEGY:
 - Do you have enough resources for it?
 - Will this generator produce resources you need?
 
+⚠️ CRITICAL: Your JSON response MUST match your reasoning!
+- If your reasoning says "build FARM", then generator_type MUST be "FARM"
+- If your reasoning says "cannot afford", then build MUST be false
+- DO NOT write one thing in reasoning and different thing in JSON!
+
 Respond with JSON:
 {{
     "build": true/false,
-    "generator_type": "MINE" or null,
-    "payment_resource": "WOOD" or "STONE" or null (only for FARM),
-    "reasoning": "brief explanation (max 150 chars)"
+    "generator_type": "LUMBER_CAMP" or "QUARRY" or "FARM" or "MINE" or "FACTORY" or "DATACENTER" or null,
+    "payment_resource": "WOOD" or "STONE" (only for FARM) or null,
+    "reasoning": "Brief explanation ending with: 'Therefore, I will build [GENERATOR_NAME]' or 'Therefore, I will skip building'"
 }}
 
+⚠️ Your reasoning MUST end with explicitly stating your choice!
+
+Examples:
+- "I need GOLD for era advancement. I can afford FARM with 40 STONE. Therefore, I will build FARM."
+- "I need WOOD but all generators are too expensive. Therefore, I will skip building."
+
 If you don't want to build (or can't afford anything), set build: false.
-If you want to build, set build: true and specify the generator_type."""
+If you want to build, set build: true and specify the generator_type matching your reasoning."""
 
     return prompt
 
