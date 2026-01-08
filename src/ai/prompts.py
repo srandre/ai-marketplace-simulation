@@ -181,7 +181,7 @@ def _format_memory_context(nation) -> str:
         memory_text += f"  Decision: {mem['decision']}\n"
         if mem.get('outcome'):
             memory_text += f"  Outcome: {mem['outcome']}\n"
-        memory_text = "\n--- END PREVIOUS DECISIONS ---\n"
+        memory_text += "\n--- END PREVIOUS DECISIONS ---\n"
 
     memory_text += "Use this history to inform your current strategy and maintain consistency.\n"
     return memory_text
@@ -306,7 +306,7 @@ Respond with JSON:
     "target_nation_id": <nation_id or null>,
     "offering": {{"GOLD": 100}} or {{"WOOD": 50, "STONE": 30}},
     "requesting": {{"WOOD": 50, "STONE": 30}} or {{"GOLD": 100}},
-    "reasoning": "Step 3 verification: Target nation has [X GOLD / Y WOOD, Z STONE]. [Why this trade makes sense]"
+    "reasoning": "Target nation has [X GOLD / Y WOOD, Z STONE]. [Why this trade makes sense]"
 }}
 
 ⚠️ Your reasoning MUST start by stating what the target nation HAS, then explain the trade logic.

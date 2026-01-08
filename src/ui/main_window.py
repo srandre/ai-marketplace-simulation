@@ -380,8 +380,10 @@ class MainWindow:
                 # Detail panel scrolling (if a log is selected)
                 elif self.selected_log and hasattr(self, 'panel_detail') and self.panel_detail.rect.collidepoint(mouse_pos):
                     # Scroll the detail panel
+                    visible_height = self.panel_detail.rect.height - 50
+                    max_scroll = max(0, self.detail_content_height - visible_height)
                     self.detail_scroll_offset -= event.y * 30
-                    self.detail_scroll_offset = max(0, self.detail_scroll_offset)
+                    self.detail_scroll_offset = max(0, min(max_scroll, self.detail_scroll_offset))
 
             # Handle button events
             for button in self.buttons:
@@ -872,19 +874,6 @@ class MainWindow:
         self._draw_scrollbar(self.panel_logs.rect, self.logs_scroll_offset,
                            total_content_height, visible_height)
 
-    def _get_resource_color(self, resource_type: ResourceType) -> tuple:
-        """Get color for a resource type."""
-        color_map = {
-            ResourceType.GOLD: colors.GOLD_COLOR,
-            ResourceType.WOOD: colors.WOOD_COLOR,
-            ResourceType.STONE: colors.STONE_COLOR,
-            ResourceType.FOOD: colors.FOOD_COLOR,
-            ResourceType.TECHNOLOGY: colors.TECHNOLOGY_COLOR,
-            ResourceType.INFORMATION: colors.INFORMATION_COLOR,
-        }
-        return color_map.get(resource_type, colors.TEXT)
-
-
     def _get_generator_emojis(self, nation) -> str:
         """Get emoji representation of generators grouped by type."""
         from ..models.enums import GeneratorType
@@ -1025,8 +1014,27 @@ class MainWindow:
                         self.screen.blit(ai_label, (x, y))
                     y += line_height + 5
 
+                    # Response section
+                    response_label = self.font_small.render("Response:", True, colors.ACCENT)
+                    if y >= clip_rect.top and y < clip_rect.bottom:
+                        self.screen.blit(response_label, (x + 10, y))
+                    y += small_line_height
+
+                    # Wrap response text
+                    y = self._draw_wrapped_text(
+                        decision.response,
+                        x + 20,
+                        y,
+                        self.panel_detail.rect.width - 40,
+                        clip_rect,
+                        small_line_height,
+                        colors.TEXT_SECONDARY
+                    )
+
+                    y += 10
+
                     # Prompt section
-                    prompt_label = self.font_small.render("User Prompt:", True, colors.TEXT_SECONDARY)
+                    prompt_label = self.font_small.render("User Prompt:", True, colors.ACCENT)
                     if y >= clip_rect.top and y < clip_rect.bottom:
                         self.screen.blit(prompt_label, (x + 10, y))
                     y += small_line_height
@@ -1042,24 +1050,6 @@ class MainWindow:
                         colors.TEXT_SECONDARY
                     )
                     y += 10
-
-                    # Response section
-                    response_label = self.font_small.render("Response:", True, colors.TEXT_SECONDARY)
-                    if y >= clip_rect.top and y < clip_rect.bottom:
-                        self.screen.blit(response_label, (x + 10, y))
-                    y += small_line_height
-
-                    # Wrap response text
-                    y = self._draw_wrapped_text(
-                        decision.response,
-                        x + 20,
-                        y,
-                        self.panel_detail.rect.width - 40,
-                        clip_rect,
-                        small_line_height,
-                        colors.TEXT_SECONDARY
-                    )
-                    y += 15
 
         self.screen.set_clip(None)
 
