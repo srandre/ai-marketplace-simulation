@@ -40,9 +40,10 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
 Your goal is to advance through the eras by collecting resources and building generators.
 
 GAME RULES:
-- There are 3 eras: Era of Origin (0), Era of Structuring (1), Era of Information (2)
+- There are 4 eras: Era of Origin (0), Era of Structuring (1), Era of Information (2) and Era of Domination (3)
 - You advance eras automatically when you have enough resources at turn start
 - Each era unlocks new resources and multiplies generation by 10x
+- Advancing to Era of Domination guarantees your victory immediately
 - Resources: Gold (💰), Wood (🪵), Stone (🪨), Food (🌾), Technology (⚙️), Information (💾)
 
 GENERATORS (base costs):
@@ -223,6 +224,7 @@ BUILDING RULES:
 - Check generator_costs for exact prices
 - Prices increase exponentially: base_cost × 2^n (n = already built globally)
 - For FARM: You MUST specify payment_resource (WOOD or STONE)
+- For MINE, FACTORY or INFORMATION: You MUST have enough of both resource requirements to build one
 - Only build if you have enough resources
 
 STRATEGY:

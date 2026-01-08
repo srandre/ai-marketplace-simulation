@@ -57,6 +57,9 @@ class Nation(BaseModel):
         elif self.era == Era.STRUCTURING:
             self.era = Era.INFORMATION
             return True
+        elif self.era == Era.INFORMATION:
+            self.era = Era.DOMINATION
+            return True
         return False
 
     def get_relationship(self, nation_id: int) -> int:

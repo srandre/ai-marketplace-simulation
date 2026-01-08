@@ -27,6 +27,8 @@ class GameState(BaseModel):
     transaction_history: TransactionHistory = Field(default_factory=TransactionHistory)
     game_log: GameLog = Field(default_factory=GameLog)
     is_initialized: bool = Field(default=False)
+    winner_nation_id: Optional[int] = Field(default=None)  # Set when a nation reaches Era of Domination
+    game_over: bool = Field(default=False)
 
     def initialize_game(self) -> None:
         """Initialize the game with nations and starting resources."""
@@ -173,6 +175,10 @@ class GameState(BaseModel):
             reqs = config.get("era_advancement.era_1_requirements", {})
         elif current_era == Era.STRUCTURING:
             reqs = config.get("era_advancement.era_2_requirements", {})
+        elif current_era == Era.INFORMATION:
+            reqs = config.get("era_advancement.era_3_requirements", {})
+        elif current_era == Era.DOMINATION:
+            return None  # Max era reached
         else:
             return None
 

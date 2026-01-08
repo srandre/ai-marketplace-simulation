@@ -210,7 +210,7 @@ class AsyncTurnExecutor:
 
             if not can_afford_anything:
                 # Mandatory turn skip - nation cannot afford any generator
-                summary = f"{current_nation.name}: turn skipped (cannot afford any generators)"
+                summary = f"{current_nation.name}: Build Phase skipped (cannot afford any generators)"
                 self.controller.game_state.game_log.add_entry(
                     log_type=LogType.ACTION,
                     turn_number=self.controller.game_state.turn_number,

@@ -21,6 +21,7 @@ WARNING = (243, 156, 18)
 ERROR = (231, 76, 60)
 BORDER = (80, 80, 100)
 HOVER = (40, 60, 120)
+GOLD = (255, 215, 0)
 
 # Resource colors
 GOLD_COLOR = (255, 215, 0)

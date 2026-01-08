@@ -40,6 +40,18 @@ eras:
     generation_multiplier: 100
     base_generation: 1000
 
+  - name: "Era of Domination"
+    index: 3
+    unlocked_resources:
+      - GOLD
+      - WOOD
+      - STONE
+      - FOOD
+      - TECHNOLOGY
+      - INFORMATION
+    generation_multiplier: 1000
+    base_generation: 10000
+
 resources:
   GOLD:
     name: "Gold"
@@ -133,6 +145,14 @@ era_advancement:
     STONE: 500
     FOOD: 500
     TECHNOLOGY: 200
+
+  era_3_requirements:
+    GOLD: 50000
+    WOOD: 50000
+    STONE: 50000
+    FOOD: 50000
+    TECHNOLOGY: 20000
+    INFORMATION: 10000
 
 diplomacy:
   initial_relationship: 0  # Neutral start

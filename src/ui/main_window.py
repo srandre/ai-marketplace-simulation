@@ -245,6 +245,10 @@ class MainWindow:
 
     def _toggle_auto_mode(self) -> None:
         """Toggle auto mode."""
+        # Don't allow toggling if game is over
+        if self.controller.game_state.game_over:
+            return
+
         self.auto_mode = not self.auto_mode
         self.btn_auto.text = f"Auto: {'ON' if self.auto_mode else 'OFF'}"
 
@@ -386,12 +390,21 @@ class MainWindow:
 
     def update(self) -> None:
         """Update game state."""
+        # Check if game is over
+        game_over = self.controller.game_state.game_over
+
         # Update button states
         is_busy = self.turn_executor.status.is_busy()
-        self.btn_next_turn.enabled = not is_busy and not self.auto_mode
+        self.btn_next_turn.enabled = not is_busy and not self.auto_mode and not game_over
+        self.btn_auto.enabled = not game_over
+
+        # Disable auto mode if game is over
+        if game_over and self.auto_mode:
+            self.auto_mode = False
+            self.btn_auto.text = "Auto: OFF"
 
         # Auto mode processing
-        if self.auto_mode and not is_busy:
+        if self.auto_mode and not is_busy and not game_over:
             self._next_turn()
 
         # Update info button hover state
@@ -543,13 +556,36 @@ class MainWindow:
         self.screen.set_clip(None)
 
     def _draw_current_turn(self) -> None:
-        """Draw current turn info."""
+        """Draw current turn info or winner if game is over."""
+        x = self.panel_current.rect.x + 10
+        y = self.panel_current.rect.y + 50
+
+        # Check if game is over
+        if self.controller.game_state.game_over and self.controller.game_state.winner_nation_id is not None:
+            winner = self.controller.game_state.get_nation(self.controller.game_state.winner_nation_id)
+            if winner:
+                # Display winner - all elements aligned to same baseline Y
+                winner_text = "🏆 Winner:"
+                winner_surf = self.font_medium.render(winner_text, True, colors.GOLD)
+                self.screen.blit(winner_surf, (x, y))
+
+                # Winner flag - align to same Y as text
+                winner_width = self.font_medium.size(winner_text)[0]
+                flag_x = x + winner_width + 20
+                if winner.name in self.flag_images:
+                    flag_img = self.flag_images[winner.name]['medium']
+                    self.screen.blit(flag_img, (flag_x, y - 2))  # Slightly higher to center with text
+
+                # Winner name - align to same Y as text
+                nation_x = flag_x + 40
+                nation_text = winner.name
+                nation_surf = self.font_medium.render(nation_text, True, colors.GOLD)
+                self.screen.blit(nation_surf, (nation_x, y))
+                return
+
         current_nation = self.controller.game_state.get_current_nation()
         if not current_nation:
             return
-
-        x = self.panel_current.rect.x + 10
-        y = self.panel_current.rect.y + 50
 
         # Current Turn label with nation
         turn_text = "Current Turn:"
@@ -990,7 +1026,7 @@ class MainWindow:
                     y += line_height + 5
 
                     # Prompt section
-                    prompt_label = self.font_small.render("Prompt:", True, colors.TEXT_SECONDARY)
+                    prompt_label = self.font_small.render("User Prompt:", True, colors.TEXT_SECONDARY)
                     if y >= clip_rect.top and y < clip_rect.bottom:
                         self.screen.blit(prompt_label, (x + 10, y))
                     y += small_line_height

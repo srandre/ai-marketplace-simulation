@@ -51,7 +51,7 @@ class TurnManager:
 
     def _check_era_advancement(self, nation) -> None:
         """Check if nation can advance to next era and do so if possible."""
-        if nation.era == Era.INFORMATION:
+        if nation.era == Era.DOMINATION:
             return  # Already at max era
 
         requirements = self.game_state.get_era_advancement_requirements(nation.era)
@@ -74,6 +74,19 @@ class TurnManager:
                     "requirements_met": {k.value: v for k, v in requirements.items()},
                 },
             )
+
+            # Check if nation reached Era of Domination (game over condition)
+            if nation.era == Era.DOMINATION:
+                self.game_state.winner_nation_id = nation.id
+                self.game_state.game_over = True
+                self.game_state.game_log.add_entry(
+                    log_type=LogType.ACTION,
+                    turn_number=self.game_state.turn_number,
+                    round_number=self.game_state.round_number,
+                    summary=f"🏆 {nation.name} has achieved the Era of Domination and won the game!",
+                    nations_involved=[nation.id],
+                    details={"event": "game_over", "winner": nation.id},
+                )
 
     def end_turn(self) -> None:
         """End a nation's turn."""

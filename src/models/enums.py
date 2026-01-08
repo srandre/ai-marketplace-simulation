@@ -31,6 +31,7 @@ class Era(Enum):
     ORIGIN = 0
     STRUCTURING = 1
     INFORMATION = 2
+    DOMINATION = 3
 
 
 class ActionType(str, Enum):

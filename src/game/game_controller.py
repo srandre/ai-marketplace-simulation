@@ -209,7 +209,7 @@ class GameController:
                     # Log the failed trade attempt
                     from ..models.enums import LogType
                     self.game_state.game_log.add_entry(
-                        log_type=LogType.TRADE,
+                        log_type=LogType.TRADE_REJECTED,
                         turn_number=self.game_state.turn_number,
                         round_number=self.game_state.round_number,
                         summary=f"{nation.name} trade failed: {target_nation.name} lacks resources",
