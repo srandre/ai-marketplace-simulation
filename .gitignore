@@ -26,5 +26,5 @@ Thumbs.db
 saves/
 *.log
 
-# Config (local settings)
-config/game_config.yaml
+# Environment variables (contains API keys)
+.env
