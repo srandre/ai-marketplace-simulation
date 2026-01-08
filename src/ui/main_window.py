@@ -7,7 +7,7 @@ from ..game.game_controller import GameController
 from ..models.enums import ResourceType
 from ..utils.config import config
 from . import colors
-from .components import Button, Panel
+from .components import Button, Panel, draw_rounded_rect, draw_rounded_rect_border
 from .resource_display import get_resource_emoji, format_resources_dict, GENERATOR_EMOJIS
 
 
@@ -65,6 +65,11 @@ class MainWindow:
         self.tooltip_log = None
         self.tooltip_timer = 0
         self.tooltip_delay = 30  # frames (~0.5 seconds at 60fps)
+        self.info_button_hovered = False
+
+        # Modal state
+        self.show_system_prompt_modal = False
+        self.modal_scroll_offset = 0
 
         # Async turn execution
         from ..game.async_turn_executor import AsyncTurnExecutor
@@ -164,6 +169,15 @@ class MainWindow:
             enabled=True
         )
 
+        # Info button in bottom right corner
+        info_button_size = 40
+        self.info_button_rect = pygame.Rect(
+            self.width - info_button_size - button_spacing,
+            button_y + (button_height - info_button_size) // 2,
+            info_button_size,
+            info_button_size
+        )
+
         self.buttons = [self.btn_auto, self.btn_next_turn]
 
         # Responsive panels - calculate based on screen size
@@ -248,6 +262,12 @@ class MainWindow:
             if event.type == pygame.QUIT:
                 self.running = False
 
+            # Handle ESC key to close modal
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE and self.show_system_prompt_modal:
+                    self.show_system_prompt_modal = False
+                    self.modal_scroll_offset = 0
+
             # Handle window resize
             if event.type == pygame.VIDEORESIZE:
                 self.width = event.w
@@ -258,6 +278,21 @@ class MainWindow:
             # Handle mouse clicks
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left click
                 mouse_pos = pygame.mouse.get_pos()
+
+                # If modal is open, handle modal interactions
+                if self.show_system_prompt_modal:
+                    modal_rect = self._get_modal_rect()
+                    if not modal_rect.collidepoint(mouse_pos):
+                        # Clicked outside modal (backdrop), close it
+                        self.show_system_prompt_modal = False
+                        self.modal_scroll_offset = 0
+                    continue  # Don't process other clicks when modal is open
+
+                # Check if clicked on info button
+                if self.info_button_rect.collidepoint(mouse_pos):
+                    self.show_system_prompt_modal = True
+                    self.modal_scroll_offset = 0
+                    continue
 
                 # Check if clicked on scrollbar
                 scrollbar_clicked = self._check_scrollbar_click(mouse_pos)
@@ -294,6 +329,21 @@ class MainWindow:
             # Handle mouse wheel for scrolling
             if event.type == pygame.MOUSEWHEEL:
                 mouse_pos = pygame.mouse.get_pos()
+
+                # Modal scrolling
+                if self.show_system_prompt_modal:
+                    modal_rect = self._get_modal_rect()
+                    if modal_rect.collidepoint(mouse_pos):
+                        # Calculate max scroll
+                        system_prompt = self.controller.decision_maker.system_prompt
+                        line_height = 20
+                        total_content_height = len(system_prompt.split('\n')) * line_height
+                        content_height = modal_rect.height - 140  # Account for title, hint, and padding
+                        max_scroll = max(0, total_content_height - content_height)
+
+                        self.modal_scroll_offset -= event.y * 30
+                        self.modal_scroll_offset = max(0, min(max_scroll, self.modal_scroll_offset))
+                    continue
 
                 # Nations panel scrolling
                 if self.panel_nations.rect.collidepoint(mouse_pos):
@@ -339,8 +389,11 @@ class MainWindow:
         if self.auto_mode and not is_busy:
             self._next_turn()
 
-        # Update tooltip timer
+        # Update info button hover state
         mouse_pos = pygame.mouse.get_pos()
+        self.info_button_hovered = self.info_button_rect.collidepoint(mouse_pos)
+
+        # Update tooltip timer
         if self.panel_logs.rect.collidepoint(mouse_pos):
             hovered_log = self._get_log_at_position(mouse_pos)
             if hovered_log == self.tooltip_log:
@@ -381,9 +434,20 @@ class MainWindow:
         # Draw global resources in bottom bar
         self._draw_global_resources_bar()
 
-        # Draw tooltip last (on top of everything)
+        # Draw info button
+        self._draw_info_button()
+
+        # Draw tooltip for info button if hovered
+        if self.info_button_hovered and not self.show_system_prompt_modal:
+            self._draw_info_tooltip()
+
+        # Draw tooltip for logs if applicable
         if self.tooltip_log and self.tooltip_timer >= self.tooltip_delay:
             self._draw_tooltip()
+
+        # Draw modal last (on top of everything)
+        if self.show_system_prompt_modal:
+            self._draw_system_prompt_modal()
 
         pygame.display.flip()
 
@@ -649,7 +713,7 @@ class MainWindow:
 
         # Draw scrollbar background
         bg_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
-        pygame.draw.rect(self.screen, colors.SECONDARY, bg_rect)
+        draw_rounded_rect(self.screen, colors.SECONDARY, bg_rect, border_radius=6)
 
         # Calculate thumb size and position
         thumb_height = max(20, int((visible_height / content_height) * scrollbar_height))
@@ -658,7 +722,7 @@ class MainWindow:
 
         # Draw scrollbar thumb
         thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
-        pygame.draw.rect(self.screen, colors.TEXT_SECONDARY, thumb_rect, border_radius=4)
+        draw_rounded_rect(self.screen, colors.TEXT_SECONDARY, thumb_rect, border_radius=6)
 
     def _draw_inline_logs(self) -> None:
         """Draw game logs inline in the panel with scrolling."""
@@ -698,7 +762,7 @@ class MainWindow:
                     self.panel_logs.rect.width - 10,
                     line_height
                 )
-                pygame.draw.rect(self.screen, colors.ACCENT, highlight_rect, 2)
+                draw_rounded_rect_border(self.screen, colors.ACCENT, highlight_rect, width=2, border_radius=5)
 
             # Round.Turn format (e.g., R1.T1, R1.T2, R2.T1)
             round_turn_text = f"R{log.round_number}.T{log.turn_number}"
@@ -801,16 +865,18 @@ class MainWindow:
             self.screen.blit(text_surf, (x, y))
         y += line_height + 5
 
-        # Summary (truncate to fit within clip area)
+        # Summary (wrap text instead of truncating)
         max_summary_width = clip_rect.width - 10  # Leave margin
-        summary_text = log.summary
-        while self.font_small.size(summary_text)[0] > max_summary_width and len(summary_text) > 10:
-            summary_text = summary_text[:-4] + "..."
-
-        text_surf = self.font_small.render(summary_text, True, colors.TEXT)
-        if y >= clip_rect.top and y < clip_rect.bottom:
-            self.screen.blit(text_surf, (x, y))
-        y += line_height + 10
+        y = self._draw_wrapped_text(
+            log.summary,
+            x,
+            y,
+            max_summary_width,
+            clip_rect,
+            line_height,
+            colors.TEXT
+        )
+        y += 10  # Extra spacing after summary
 
         # Details section
         if log.details:
@@ -819,7 +885,8 @@ class MainWindow:
                 'trade_offers' in log.details or
                 'offer' in log.details or
                 'counter_offer' in log.details or
-                'generated' in log.details
+                'generated' in log.details or
+                'failure_reason' in log.details
             )
 
             if has_content:
@@ -863,6 +930,19 @@ class MainWindow:
                 if y >= clip_rect.top and y < clip_rect.bottom:
                     self.screen.blit(text_surf, (x + 10, y))
                 y += small_line_height
+
+            # Display failure reason for failed builds
+            if 'failure_reason' in log.details:
+                failure_text = f"Reason: {log.details['failure_reason']}"
+                y = self._draw_wrapped_text(
+                    failure_text,
+                    x + 10,
+                    y,
+                    clip_rect.width - 20,
+                    clip_rect,
+                    small_line_height,
+                    colors.ERROR
+                )
 
             y += 10
 
@@ -1139,11 +1219,167 @@ class MainWindow:
 
         # Draw tooltip background
         tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
-        pygame.draw.rect(self.screen, colors.SECONDARY, tooltip_rect)
-        pygame.draw.rect(self.screen, colors.ACCENT, tooltip_rect, 2)
+        draw_rounded_rect(self.screen, colors.SECONDARY, tooltip_rect, border_radius=8)
+        draw_rounded_rect_border(self.screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
 
         # Draw tooltip text
         self.screen.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))
+
+    def _draw_info_button(self) -> None:
+        """Draw circular info button."""
+        # Button colors based on hover state
+        if self.info_button_hovered:
+            bg_color = colors.HOVER
+            border_color = colors.ACCENT
+        else:
+            bg_color = colors.PRIMARY
+            border_color = colors.BORDER
+
+        # Draw circle
+        center = self.info_button_rect.center
+        radius = self.info_button_rect.width // 2
+        pygame.draw.circle(self.screen, bg_color, center, radius)
+        pygame.draw.circle(self.screen, border_color, center, radius, 2)
+
+        # Draw "i" text
+        i_text = self.font_medium.render("i", True, colors.TEXT)
+        i_rect = i_text.get_rect(center=center)
+        self.screen.blit(i_text, i_rect)
+
+    def _draw_info_tooltip(self) -> None:
+        """Draw tooltip for info button."""
+        # Create tooltip
+        padding = 10
+        text_surf = self.font_small.render("System Prompt", True, colors.TEXT)
+        tooltip_width = text_surf.get_width() + padding * 2
+        tooltip_height = text_surf.get_height() + padding * 2
+
+        # Position above the button
+        tooltip_x = self.info_button_rect.centerx - tooltip_width // 2
+        tooltip_y = self.info_button_rect.top - tooltip_height - 10
+
+        # Keep on screen
+        if tooltip_x < 0:
+            tooltip_x = 0
+        if tooltip_x + tooltip_width > self.width:
+            tooltip_x = self.width - tooltip_width
+
+        # Draw tooltip
+        tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
+        draw_rounded_rect(self.screen, colors.SECONDARY, tooltip_rect, border_radius=8)
+        draw_rounded_rect_border(self.screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
+        self.screen.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))
+
+    def _get_modal_rect(self) -> pygame.Rect:
+        """Get the modal rectangle."""
+        modal_width = min(800, self.width - 100)
+        modal_height = min(600, self.height - 100)
+        modal_x = (self.width - modal_width) // 2
+        modal_y = (self.height - modal_height) // 2
+        return pygame.Rect(modal_x, modal_y, modal_width, modal_height)
+
+    def _draw_system_prompt_modal(self) -> None:
+        """Draw modal showing the system prompt."""
+        # Draw backdrop
+        backdrop = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        backdrop.fill((0, 0, 0, 180))  # Semi-transparent black
+        self.screen.blit(backdrop, (0, 0))
+
+        # Get modal rect
+        modal_rect = self._get_modal_rect()
+
+        # Draw modal background
+        draw_rounded_rect(self.screen, colors.SECONDARY, modal_rect, border_radius=15)
+        draw_rounded_rect_border(self.screen, colors.ACCENT, modal_rect, width=3, border_radius=15)
+
+        # Draw title
+        title_text = self.font_large.render("System Prompt", True, colors.ACCENT)
+        title_rect = title_text.get_rect(centerx=modal_rect.centerx, top=modal_rect.top + 20)
+        self.screen.blit(title_text, title_rect)
+
+        # Draw close hint
+        hint_text = self.font_small.render("Press ESC or click outside to close", True, colors.TEXT_SECONDARY)
+        hint_rect = hint_text.get_rect(centerx=modal_rect.centerx, top=title_rect.bottom + 5)
+        self.screen.blit(hint_text, hint_rect)
+
+        # Create scrollable content area
+        content_y = hint_rect.bottom + 20
+        content_height = modal_rect.bottom - content_y - 20
+        content_rect = pygame.Rect(
+            modal_rect.left + 20,
+            content_y,
+            modal_rect.width - 40,
+            content_height
+        )
+
+        # Set clipping for content area
+        self.screen.set_clip(content_rect)
+
+        # Get system prompt
+        system_prompt = self.controller.decision_maker.system_prompt
+
+        # Draw system prompt text with wrapping
+        y = content_y - self.modal_scroll_offset
+        line_height = 20
+
+        for line in system_prompt.split('\n'):
+            if line.strip():
+                # Wrap long lines
+                words = line.split(' ')
+                current_line = ""
+                for word in words:
+                    test_line = current_line + (" " if current_line else "") + word
+                    test_surf = self.font_small.render(test_line, True, colors.TEXT)
+                    if test_surf.get_width() <= content_rect.width - 20:
+                        current_line = test_line
+                    else:
+                        # Draw current line
+                        if current_line and y >= content_rect.top - line_height and y < content_rect.bottom:
+                            text_surf = self.font_small.render(current_line, True, colors.TEXT)
+                            self.screen.blit(text_surf, (content_rect.left + 10, y))
+                        y += line_height
+                        current_line = word
+
+                # Draw remaining line
+                if current_line and y >= content_rect.top - line_height and y < content_rect.bottom:
+                    text_surf = self.font_small.render(current_line, True, colors.TEXT)
+                    self.screen.blit(text_surf, (content_rect.left + 10, y))
+                y += line_height
+            else:
+                # Empty line
+                y += line_height // 2
+
+        # Reset clipping
+        self.screen.set_clip(None)
+
+        # Draw scrollbar if needed
+        total_content_height = len(system_prompt.split('\n')) * line_height
+        if total_content_height > content_height:
+            self._draw_modal_scrollbar(modal_rect, content_rect, total_content_height, content_height)
+
+    def _draw_modal_scrollbar(self, modal_rect: pygame.Rect, content_rect: pygame.Rect,
+                             total_height: int, visible_height: int) -> None:
+        """Draw scrollbar for modal."""
+        scrollbar_width = 8
+        scrollbar_x = modal_rect.right - scrollbar_width - 15
+        scrollbar_y = content_rect.top
+        scrollbar_height = content_rect.height
+
+        # Draw scrollbar track
+        track_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
+        draw_rounded_rect(self.screen, colors.BORDER, track_rect, border_radius=4)
+
+        # Calculate thumb size and position
+        thumb_height = max(20, int((visible_height / total_height) * scrollbar_height))
+        max_scroll = total_height - visible_height
+        if max_scroll > 0:
+            thumb_y = scrollbar_y + int((self.modal_scroll_offset / max_scroll) * (scrollbar_height - thumb_height))
+        else:
+            thumb_y = scrollbar_y
+
+        # Draw thumb
+        thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
+        draw_rounded_rect(self.screen, colors.ACCENT, thumb_rect, border_radius=4)
 
     def run(self) -> None:
         """Main game loop."""

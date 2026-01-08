@@ -16,14 +16,15 @@ class GameController:
 
     def __init__(self):
         self.game_state = GameState()
+        self.game_state.initialize_game()  # Initialize first so generator_manager is available
         self.turn_manager = TurnManager(self.game_state)
         self.building_manager = BuildingManager(self.game_state)
         self.trading_manager = TradingManager(self.game_state)
-        self.decision_maker = DecisionMaker()
+        self.decision_maker = DecisionMaker(self.game_state.generator_manager)
 
     def initialize(self) -> None:
-        """Initialize the game."""
-        self.game_state.initialize_game()
+        """Initialize the game (already done in __init__)."""
+        pass  # Game is now initialized in __init__
 
     def _build_game_state_summary(self) -> Dict:
         """Build a summary of the game state for AI decision-making."""
@@ -234,7 +235,19 @@ class GameController:
 
         try:
             generator_type = GeneratorType[gen_type_str.upper()]
-            success, message = self.building_manager.build_generator(nation, generator_type)
+
+            # Extract payment_resource for Farm builds
+            payment_resource = None
+            payment_resource_str = action.get("payment_resource")
+            if payment_resource_str:
+                try:
+                    payment_resource = ResourceType[payment_resource_str.upper()]
+                except (KeyError, ValueError):
+                    pass  # Invalid resource type, will be handled by build_generator
+
+            success, message = self.building_manager.build_generator(
+                nation, generator_type, payment_resource=payment_resource
+            )
 
             if not success:
                 # Log the failed build attempt

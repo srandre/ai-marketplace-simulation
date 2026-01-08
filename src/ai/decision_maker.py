@@ -1,6 +1,6 @@
 """AI decision-making coordinator."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from ..models.enums import ResourceType
 from ..models.nation import Nation
@@ -13,13 +13,16 @@ from .prompts import (
     create_trade_response_prompt,
 )
 
+if TYPE_CHECKING:
+    from ..models.generator import GeneratorManager
+
 
 class DecisionMaker:
     """Coordinates AI decision-making for nations."""
 
-    def __init__(self):
+    def __init__(self, generator_manager: "GeneratorManager"):
         self.client = DeepSeekClient()
-        self.system_prompt = create_system_prompt()
+        self.system_prompt = create_system_prompt(generator_manager)
 
     def decide_all_actions(
         self,

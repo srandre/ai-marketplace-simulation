@@ -1,14 +1,39 @@
 """Prompt templates for AI decision-making."""
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from ..models.nation import Nation
 
+if TYPE_CHECKING:
+    from ..models.generator import GeneratorManager
 
-def create_system_prompt() -> str:
-    """Create the system prompt that defines the AI's role."""
-    return """You are an AI controlling a nation in a strategic resource management game.
+
+def create_system_prompt(generator_manager: "GeneratorManager") -> str:
+    """Create the system prompt that defines the AI's role with dynamic generator costs from config."""
+
+    # Build generator descriptions from config
+    generator_descriptions = []
+    blueprints = generator_manager.get_all_blueprints()
+
+    for gen_type, blueprint in blueprints.items():
+        # Format the cost
+        if blueprint.base_cost_any is not None:
+            cost_str = f"{blueprint.base_cost_any} of any single resource"
+        else:
+            cost_parts = [f"{amount} {res_type.name}" for res_type, amount in blueprint.base_cost.items()]
+            cost_str = " + ".join(cost_parts)
+
+        # Add era requirement if applicable
+        era_note = f" (Era {blueprint.required_era}+)" if blueprint.required_era > 0 else ""
+
+        generator_descriptions.append(
+            f"- {blueprint.name} (produces {blueprint.produces.name}): {cost_str}{era_note}"
+        )
+
+    generators_text = "\n".join(generator_descriptions)
+
+    return f"""You are an AI controlling a nation in a strategic resource management game.
 
 Your goal is to advance through the eras by collecting resources and building generators.
 
@@ -18,18 +43,14 @@ GAME RULES:
 - Each era unlocks new resources and multiplies generation by 10x
 - Resources: Gold (💰), Wood (🪵), Stone (🪨), Food (🌾), Technology (⚙️), Information (💾)
 
-GENERATORS:
-- Lumber Camp (produces Wood): costs Stone
-- Quarry (produces Stone): costs Wood
-- Farm (produces Food): costs any resource
-- Mine (produces Gold): costs Stone + Wood
-- Factory (produces Technology): costs Food + Gold (Era 1+)
-- Datacenter (produces Information): costs Gold + Technology (Era 2+)
+GENERATORS (base costs):
+{generators_text}
 
-Generator prices increase progressively: 1st costs base price, 2nd costs 2x base, 3rd costs 3x base, etc.
+Generator prices increase exponentially depending on how many of that type exist globally:
+Current cost = base cost × 2^n (where n = number of that generator type already built by any nation)
 
 TURN ACTIONS:
-You can do 0 to 3 actions per turn:
+You can do 0 to 2 actions per turn:
 1. TRADE: Propose a trade to another nation
 2. BUILD: Construct a generator
 
@@ -138,6 +159,12 @@ Respond with JSON containing your full turn plan:
             "type": "BUILD",
             "reasoning": "why you're building this",
             "generator_type": "MINE"
+        }},
+        {{
+            "type": "BUILD",
+            "reasoning": "building Farm with wood",
+            "generator_type": "FARM",
+            "payment_resource": "WOOD"
         }}
     ]
 }}
@@ -150,6 +177,7 @@ RULES:
 - Check generator_costs for exact prices
 - One side of trade must be ONLY GOLD, other side NO GOLD
 - IMPORTANT: Before proposing a trade, verify the target nation HAS the resources you're requesting
+- When building a FARM, you MUST specify payment_resource (WOOD, STONE or FOOD) since Farm can be built with any of those resources
 
 Plan your turn to advance toward the next era!"""
 

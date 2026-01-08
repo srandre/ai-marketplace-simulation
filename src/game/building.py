@@ -1,6 +1,8 @@
 """Building system for constructing generators."""
 
-from ..models.enums import GeneratorType, LogType
+from typing import Optional
+
+from ..models.enums import GeneratorType, LogType, ResourceType
 from ..models.nation import Nation
 from .game_state import GameState
 
@@ -50,10 +52,15 @@ class BuildingManager:
             return False, f"Missing: {', '.join(missing)}"
 
     def build_generator(
-        self, nation: Nation, generator_type: GeneratorType
+        self, nation: Nation, generator_type: GeneratorType, payment_resource: Optional[ResourceType] = None
     ) -> tuple[bool, str]:
         """
         Build a generator for a nation.
+
+        Args:
+            nation: The nation building the generator
+            generator_type: The type of generator to build
+            payment_resource: Optional specific resource to use for payment (for Farm)
 
         Returns (success, message).
         """
@@ -69,14 +76,21 @@ class BuildingManager:
 
         # Deduct resources
         if blueprint.base_cost_any is not None:
-            # Farm case
-            resource_type = blueprint.can_pay_with_any(nation.inventory, count_built)
-            if not resource_type:
-                return False, "Insufficient resources"
-
+            # Farm case - can pay with any single resource
             required_amount = blueprint.base_cost_any * (2 ** count_built)
-            nation.inventory.remove(resource_type, required_amount)
 
+            # Use specified payment resource if provided
+            if payment_resource is not None:
+                if not nation.inventory.has(payment_resource, required_amount):
+                    return False, f"Insufficient {payment_resource.value}: need {required_amount}, have {nation.inventory.get(payment_resource)}"
+                resource_type = payment_resource
+            else:
+                # Fall back to automatic selection
+                resource_type = blueprint.can_pay_with_any(nation.inventory, count_built)
+                if not resource_type:
+                    return False, "Insufficient resources"
+
+            nation.inventory.remove(resource_type, required_amount)
             cost_paid = {resource_type: required_amount}
         else:
             # Normal case

@@ -6,6 +6,27 @@ from typing import Callable, Optional
 from . import colors
 
 
+def draw_rounded_rect(
+    surface: pygame.Surface,
+    color: tuple[int, int, int],
+    rect: pygame.Rect,
+    border_radius: int = 10
+) -> None:
+    """Draw a rounded rectangle."""
+    pygame.draw.rect(surface, color, rect, border_radius=border_radius)
+
+
+def draw_rounded_rect_border(
+    surface: pygame.Surface,
+    color: tuple[int, int, int],
+    rect: pygame.Rect,
+    width: int = 2,
+    border_radius: int = 10
+) -> None:
+    """Draw a rounded rectangle border."""
+    pygame.draw.rect(surface, color, rect, width=width, border_radius=border_radius)
+
+
 class Button:
     """A clickable button component."""
 
@@ -49,8 +70,8 @@ class Button:
             bg_color = colors.PRIMARY
             text_color = colors.TEXT
 
-        pygame.draw.rect(screen, bg_color, self.rect)
-        pygame.draw.rect(screen, colors.BORDER, self.rect, 2)
+        draw_rounded_rect(screen, bg_color, self.rect, border_radius=8)
+        draw_rounded_rect_border(screen, colors.BORDER, self.rect, width=2, border_radius=8)
 
         text_surf = font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
@@ -66,8 +87,8 @@ class Panel:
 
     def draw(self, screen: pygame.Surface, font: pygame.font.Font) -> None:
         """Draw the panel."""
-        pygame.draw.rect(screen, colors.SECONDARY, self.rect)
-        pygame.draw.rect(screen, colors.BORDER, self.rect, 2)
+        draw_rounded_rect(screen, colors.SECONDARY, self.rect, border_radius=10)
+        draw_rounded_rect_border(screen, colors.BORDER, self.rect, width=2, border_radius=10)
 
         if self.title:
             title_surf = font.render(self.title, True, colors.TEXT)
@@ -132,4 +153,4 @@ class ScrollableList:
             y_pos += self.item_height
 
         screen.blit(list_surface, self.rect.topleft)
-        pygame.draw.rect(screen, colors.BORDER, self.rect, 2)
+        draw_rounded_rect_border(screen, colors.BORDER, self.rect, width=2, border_radius=10)
