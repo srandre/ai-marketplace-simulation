@@ -814,10 +814,19 @@ class MainWindow:
 
         # Details section
         if log.details:
-            detail_label = self.font_small.render("Details:", True, colors.ACCENT)
-            if y >= clip_rect.top and y < clip_rect.bottom:
-                self.screen.blit(detail_label, (x, y))
-            y += line_height
+            # Check if there's actual content to display
+            has_content = (
+                'trade_offers' in log.details or
+                'offer' in log.details or
+                'counter_offer' in log.details or
+                'generated' in log.details
+            )
+
+            if has_content:
+                detail_label = self.font_small.render("Details:", True, colors.ACCENT)
+                if y >= clip_rect.top and y < clip_rect.bottom:
+                    self.screen.blit(detail_label, (x, y))
+                y += line_height
 
             # Format details based on log type
             if 'trade_offers' in log.details:

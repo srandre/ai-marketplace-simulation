@@ -108,7 +108,7 @@ def create_combined_turn_decision_prompt(
 GAME STATE:
 {json.dumps(prompt_data, indent=2)}
 
-You can take 0-3 actions this turn. Plan your complete turn strategy:
+You can take 0-2 actions this turn. Plan your complete turn strategy:
 1. TRADE: Propose one trade to another nation (optional)
 2. BUILD: Build one generator (optional)
 
@@ -122,6 +122,7 @@ TRADING RULES:
 - To BUY: Offer ONLY GOLD, request resources (no gold)
 - To SELL: Offer resources (no gold), request ONLY GOLD
 - Check if you/target have the resources needed for the trade
+- If the trade is rejected, you may try one more time later, with a different (or same) trade and with a different nation
 
 Respond with JSON containing your full turn plan:
 {{
@@ -130,8 +131,8 @@ Respond with JSON containing your full turn plan:
             "type": "TRADE",
             "reasoning": "why you're making this trade",
             "target_nation_id": 0,
-            "offering": {{"GOLD": 100}},  // ONLY GOLD if buying
-            "requesting": {{"WOOD": 50, "STONE": 30}}  // NO GOLD if buying
+            "offering": {{"GOLD": 100}},
+            "requesting": {{"WOOD": 50, "STONE": 30}}
         }},
         {{
             "type": "BUILD",
@@ -143,11 +144,12 @@ Respond with JSON containing your full turn plan:
 
 RULES:
 - actions array can be empty [] if you choose to pass
-- Maximum 1 TRADE and 1 BUILD action
+- Maximum 2 actions total: 1 TRADE and/or 1 BUILD (0-2 actions)
 - Each reasoning should be under 150 characters
 - Order doesn't matter (we execute TRADE before BUILD)
 - Check generator_costs for exact prices
 - One side of trade must be ONLY GOLD, other side NO GOLD
+- IMPORTANT: Before proposing a trade, verify the target nation HAS the resources you're requesting
 
 Plan your turn to advance toward the next era!"""
 
@@ -201,14 +203,11 @@ Respond with JSON:
 {{
     "decision": "ACCEPT" | "COUNTER" | "REJECT",
     "reasoning": "why you made this choice",
-    "counter_offer": {{  // Only if decision is COUNTER
-        // If they offered gold, you must offer resources (no gold)
-        "offering": {{"WOOD": 30, "STONE": 20}},  // NO GOLD
-        "requesting": {{"GOLD": 50}}  // ONLY GOLD
-
-        // If they offered resources, you must offer gold
-        "offering": {{"GOLD": 50}},  // ONLY GOLD
-        "requesting": {{"WOOD": 30, "STONE": 20}}  // NO GOLD
+    "counter_offer": {{
+        "offering": {{"WOOD": 30, "STONE": 20}},
+        "requesting": {{"GOLD": 50}}
+        "offering": {{"GOLD": 50}},
+        "requesting": {{"WOOD": 30, "STONE": 20}}
     }}
 }}"""
 
@@ -251,5 +250,63 @@ Respond with JSON:
     "decision": "ACCEPT" | "REJECT",
     "reasoning": "why you made this choice"
 }}"""
+
+    return prompt
+
+
+def create_alternative_trade_prompt(
+    nation: Nation,
+    other_nations: List[Dict[str, Any]],
+    original_offering: Dict[str, Any],
+    original_requesting: Dict[str, Any],
+    rejected_nation_id: int,
+    game_state: Dict[str, Any],
+) -> str:
+    """Create prompt for finding an alternative trade partner after rejection."""
+
+    # Find the rejected nation name
+    rejected_nation_name = None
+    for n in game_state.get("nations", []):
+        if n.get("id") == rejected_nation_id:
+            rejected_nation_name = n.get("name")
+            break
+
+    prompt = f"""Your trade proposal was REJECTED by {rejected_nation_name}.
+
+YOUR NATION:
+- Name: {nation.name}
+- Resources: {json.dumps(nation.inventory.to_dict(), indent=2)}
+- Era: {nation.era.value}
+
+REJECTED TRADE:
+- You offered: {json.dumps(original_offering, indent=2)}
+- You requested: {json.dumps(original_requesting, indent=2)}
+
+ALTERNATIVE PARTNERS AVAILABLE:
+{json.dumps(other_nations, indent=2)}
+
+GAME STATE:
+{json.dumps(game_state, indent=2)}
+
+You can attempt the SAME trade (same offering/requesting) with a DIFFERENT partner, OR try a DIFFERENT trade with a DIFFERENT partner, OR skip trading entirely.
+
+IMPORTANT RULES:
+1. You can only retry with a nation that HAS the resources you're requesting
+2. One side must be ONLY GOLD, other side NO GOLD
+3. Choose wisely - consider relationships and strategic value
+4. If no good alternative exists, set retry: false
+5. This is your last chance to trade. If it is rejected, you may not try trading again this turn
+
+Respond with JSON:
+{{
+    "retry": true/false,
+    "target_nation_id": <nation_id or null>,
+    "reasoning": "why you chose this partner or why you're not retrying (max 100 chars)"
+}}
+
+Example responses:
+{{"retry": true, "target_nation_id": 2, "reasoning": "USA has the resources and good relationship"}}
+{{"retry": false, "target_nation_id": null, "reasoning": "No other nation has enough wood available"}}
+"""
 
     return prompt

@@ -66,13 +66,17 @@ class GameController:
         }
 
 
-    def _process_trade_response(self, transaction: Transaction) -> None:
-        """Process the responder's decision on a trade."""
+    def _process_trade_response(self, transaction: Transaction) -> str:
+        """
+        Process the responder's decision on a trade.
+
+        Returns: "ACCEPTED", "REJECTED", or "COUNTER"
+        """
         responder = self.game_state.get_nation(transaction.responder_id)
         initiator = self.game_state.get_nation(transaction.initiator_id)
 
         if not responder or not initiator:
-            return
+            return "REJECTED"
 
         # Build context for responder
         game_state_summary = self._build_game_state_summary()
@@ -108,6 +112,7 @@ class GameController:
 
         if response_type == "ACCEPT":
             self.trading_manager.accept_trade(transaction)
+            return "ACCEPTED"
         elif response_type == "COUNTER":
             counter_offer_data = decision.get("counter_offer", {})
             counter_offer = self.decision_maker.parse_trade_offer(counter_offer_data)
@@ -116,8 +121,10 @@ class GameController:
                 if success:
                     # Ask initiator about counter-offer
                     self._process_counter_offer_response(transaction)
+            return "COUNTER"
         else:  # REJECT
             self.trading_manager.reject_trade(transaction)
+            return "REJECTED"
 
     def _process_counter_offer_response(self, transaction: Transaction) -> None:
         """Process initiator's response to a counter-offer."""
@@ -152,11 +159,15 @@ class GameController:
             self.trading_manager.reject_trade(transaction)
 
 
-    def _execute_trade_action(self, nation, action: Dict) -> None:
-        """Execute a trade action from the combined turn plan."""
+    def _execute_trade_action(self, nation, action: Dict) -> str:
+        """
+        Execute a trade action from the combined turn plan.
+
+        Returns: "ACCEPTED", "REJECTED", "COUNTER", or "INVALID"
+        """
         target_id = action.get("target_nation_id")
         if target_id is None:
-            return
+            return "INVALID"
 
         # Parse trade offer
         offering_dict = action.get("offering", {})
@@ -183,7 +194,24 @@ class GameController:
 
         if not trade_offer.is_valid():
             print(f"Invalid trade offer from {nation.name}")
-            return
+            return "INVALID"
+
+        # Check if target has the requested resources
+        target_nation = self.game_state.get_nation(target_id)
+        if target_nation:
+            for resource_type, amount in requesting.items():
+                if not target_nation.inventory.has(resource_type, amount):
+                    # Log the failed trade attempt
+                    from ..models.enums import LogType
+                    self.game_state.game_log.add_entry(
+                        log_type=LogType.TRADE,
+                        turn_number=self.game_state.turn_number,
+                        round_number=self.game_state.round_number,
+                        summary=f"{nation.name} trade failed: {target_nation.name} lacks resources",
+                        nations_involved=[nation.id, target_id],
+                        details={"offer": trade_offer.to_dict(), "reason": "Insufficient resources"},
+                    )
+                    return "INVALID"
 
         # Propose trade
         transaction = self.trading_manager.propose_trade(
@@ -191,8 +219,11 @@ class GameController:
         )
 
         if transaction:
-            # Ask target nation to respond
-            self._process_trade_response(transaction)
+            # Ask target nation to respond and store result
+            result = self._process_trade_response(transaction)
+            return result if result else "REJECTED"
+
+        return "INVALID"
 
     def _execute_build_from_plan(self, nation, action: Dict) -> None:
         """Execute a build action from the combined turn plan."""
@@ -233,4 +264,68 @@ class GameController:
                     "failure_reason": str(e),
                 },
             )
+
+    def _request_alternative_trade(self, nation, rejected_action: Dict):
+        """
+        Ask AI for an alternative trade partner after rejection.
+
+        Returns: Alternative trade action dict or None
+        """
+        from ..ai.prompts import create_alternative_trade_prompt
+
+        rejected_target_id = rejected_action.get("target_nation_id")
+        offering = rejected_action.get("offering", {})
+        requesting = rejected_action.get("requesting", {})
+
+        # Build game state summary
+        game_state_summary = self._build_game_state_summary()
+        era_reqs = self.game_state.get_era_advancement_requirements(nation.era)
+        era_reqs_dict = {k.value: v for k, v in era_reqs.items()} if era_reqs else {}
+        game_state_summary["era_requirements"] = era_reqs_dict
+
+        # Get list of other nations (excluding the one that rejected and self)
+        other_nations = [
+            n.to_summary_dict()
+            for n in self.game_state.nations
+            if n.id != nation.id and n.id != rejected_target_id
+        ]
+
+        if not other_nations:
+            return None
+
+        # Create prompt for alternative trade
+        user_prompt = create_alternative_trade_prompt(
+            nation,
+            other_nations,
+            offering,
+            requesting,
+            rejected_target_id,
+            game_state_summary
+        )
+
+        # Default decision: don't retry
+        default_decision = {
+            "retry": False,
+            "target_nation_id": None,
+            "reasoning": "Unable to determine alternative partner"
+        }
+
+        # Ask AI for alternative using standard decision maker pattern
+        decision, _raw_response = self.decision_maker.client.make_decision_with_fallback(
+            self.decision_maker.system_prompt,
+            user_prompt,
+            default_decision
+        )
+
+        # Check if AI wants to retry with a different partner
+        if decision.get("retry") and decision.get("target_nation_id") is not None:
+            return {
+                "type": "TRADE",
+                "target_nation_id": decision["target_nation_id"],
+                "offering": offering,
+                "requesting": requesting,
+                "reasoning": decision.get("reasoning", "Retrying trade with alternative partner")
+            }
+
+        return None
 

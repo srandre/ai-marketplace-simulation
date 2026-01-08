@@ -171,11 +171,20 @@ class AsyncTurnExecutor:
             )
             log_entry.add_ai_decision(current_nation.id, prompt, response)
 
-            # Execute TRADE actions first
-            for action in actions:
-                if action.get("type") == "TRADE":
-                    self.status.set_action(f"{current_nation.name} is proposing a trade...")
-                    self.controller._execute_trade_action(current_nation, action)
+            # Execute TRADE actions first (allow retry if rejected)
+            trade_actions = [a for a in actions if a.get("type") == "TRADE"]
+            if trade_actions:
+                first_trade = trade_actions[0]
+                self.status.set_action(f"{current_nation.name} is proposing a trade...")
+                trade_result = self.controller._execute_trade_action(current_nation, first_trade)
+
+                # If trade was rejected, allow one retry with a different partner
+                if trade_result == "REJECTED":
+                    self.status.set_action(f"{current_nation.name} attempting alternative trade...")
+                    # Ask AI for alternative trade partner
+                    retry_trade = self.controller._request_alternative_trade(current_nation, first_trade)
+                    if retry_trade:
+                        self.controller._execute_trade_action(current_nation, retry_trade)
 
             # Then execute BUILD actions
             for action in actions:
