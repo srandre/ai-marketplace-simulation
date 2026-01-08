@@ -37,11 +37,13 @@ TRADING RULES (IMPORTANT):
 - ALL trades must be gold-for-resources exchanges
 - One side offers ONLY GOLD (no other resources)
 - The other side offers one or more resources (but NO GOLD)
+- You can't offer a trade if the other part doesn't have the resources or gold for it.
 - Examples:
   ✓ VALID: Offer [100 GOLD] for [50 WOOD, 30 STONE]
   ✓ VALID: Offer [50 WOOD, 30 STONE] for [100 GOLD]
   ✗ INVALID: Offer [50 GOLD, 10 WOOD] for [30 STONE] (gold mixed with resources)
   ✗ INVALID: Offer [50 WOOD] for [30 STONE] (no gold on either side)
+  ✗ INVALID: Offer [50 WOOD] for [30 GOLD] when the other nation has only [10 GOLD]
 
 DIPLOMACY:
 - Successful trades improve relationships (+1)
@@ -151,101 +153,6 @@ Plan your turn to advance toward the next era!"""
 
     return prompt
 
-
-def create_action_decision_prompt(
-    nation: Nation,
-    game_state: Dict[str, Any],
-    available_actions: List[str],
-    era_requirements: Dict[str, int],
-) -> str:
-    """Create prompt for deciding which action to take (legacy - single action)."""
-
-    # Build concise game state summary
-    other_nations = []
-    for other in game_state.get("nations", []):
-        if other["id"] != nation.id:
-            relationship = nation.get_relationship(other["id"])
-            other_nations.append({
-                "id": other["id"],
-                "name": other["name"],
-                "era": other["era"],
-                "resources": other["resources"],
-                "relationship": relationship,
-            })
-
-    # Recent transactions
-    recent_trades = game_state.get("recent_transactions", [])[:5]  # Last 5 only
-
-    prompt_data = {
-        "your_nation": {
-            "name": nation.name,
-            "era": nation.era.value,
-            "resources": nation.inventory.to_dict(),
-            "generators": [
-                {"type": g.generator_type.value, "produces": g.produces.value}
-                for g in nation.generators
-            ],
-        },
-        "goal": {
-            "next_era_requirements": era_requirements,
-            "current_era": nation.era.value,
-        },
-        "other_nations": other_nations,
-        "recent_trades": recent_trades,
-        "available_actions": available_actions,
-        "generator_costs": game_state.get("generator_costs", {}),
-    }
-
-    prompt = f"""Analyze the current game state and decide your action.
-
-GAME STATE:
-{json.dumps(prompt_data, indent=2)}
-
-AVAILABLE ACTIONS: {', '.join(available_actions)}
-
-Decide which action to take. Consider:
-1. What resources do you need for the next era?
-2. What generators would help you most?
-3. Which nations have resources you need?
-4. TRADING RULES:
-   - To BUY resources: Offer ONLY GOLD, request the resources you want
-   - To SELL resources: Offer the resources, request ONLY GOLD
-   - One side must be ONLY gold, the other side must NOT have gold
-   - Check if you have enough gold to buy OR if the target has enough gold to buy from you
-   - Check if the target has the resources you want to buy OR if you have resources they might want
-
-Respond with JSON in this format:
-{{
-    "action": "SELL" | "BUY" | "BUILD" | "PASS",
-    "reasoning": "brief 1-2 sentence explanation (max 150 chars)",
-    "details": {{
-        // For SELL (selling resources for gold):
-        "target_nation_id": 0,
-        "offering": {{"WOOD": 50, "STONE": 30}},  // Resources you're selling (NO GOLD)
-        "requesting": {{"GOLD": 100}}  // ONLY GOLD
-
-        // For BUY (buying resources with gold):
-        "target_nation_id": 0,
-        "offering": {{"GOLD": 100}},  // ONLY GOLD
-        "requesting": {{"WOOD": 50, "STONE": 30}}  // Resources you want (NO GOLD)
-
-        // For BUILD:
-        "generator_type": "MINE" | "LUMBER_CAMP" | "QUARRY" | "FARM" | "FACTORY" | "DATACENTER"
-    }}
-}}
-
-CRITICAL TRADING RULES:
-- One side must be ONLY GOLD (nothing else)
-- The other side must have NO GOLD (only other resources)
-- Farm costs N of ANY single resource (not free!)
-- Keep reasoning under 150 characters
-- Check generator_costs in the game state for exact prices
-
-Choose wisely to advance toward the next era!"""
-
-    return prompt
-
-
 def create_trade_response_prompt(
     nation: Nation,
     proposer_nation: Dict[str, Any],
@@ -284,6 +191,7 @@ Consider:
 3. Is this a fair trade (consider market value)?
 4. How is your relationship with them? (Current: {relationship})
 5. Will this help you reach your era advancement goals?
+6. Consider the feasibility of the transaction. If it mathematically can't be completed by any of the parts, do not accept it.
 
 REMEMBER: All trades must follow the gold-only rule:
 - One side must be ONLY GOLD

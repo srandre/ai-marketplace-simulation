@@ -18,7 +18,8 @@ class GameState(BaseModel):
     """Central state for the entire game."""
 
     nations: List[Nation] = Field(default_factory=list)
-    turn_number: int = Field(default=1)
+    turn_number: int = Field(default=1)  # Individual turn counter (increments each nation)
+    round_number: int = Field(default=1)  # Complete round counter (increments after all nations play)
     turn_order: List[int] = Field(default_factory=list)  # Nation IDs in order
     current_nation_index: int = Field(default=0)
     generator_manager: GeneratorManager = Field(default_factory=GeneratorManager)
@@ -61,12 +62,16 @@ class GameState(BaseModel):
         # Shuffle to randomize
         random.shuffle(assigned_generators)
 
+        # Get initial era from config
+        initial_era_index = config.get("game.initial_era", 0)
+        initial_era = Era(initial_era_index)
+
         for i, nation_data in enumerate(selected_nations):
             nation = Nation(
                 id=i,
                 name=nation_data["name"],
                 code=nation_data["code"],
-                era=Era.ORIGIN,
+                era=initial_era,
                 inventory=ResourceInventory(),
             )
 
@@ -133,7 +138,10 @@ class GameState(BaseModel):
         # If we've gone through all nations, start a new round
         if self.current_nation_index >= len(self.turn_order):
             self.current_nation_index = 0
-            self.turn_number += 1
+            self.round_number += 1
+            self.turn_number = 1  # Reset turn number at start of new round
+        else:
+            self.turn_number += 1  # Increment turn within the round
 
     def _increment_generator_count(self, generator_type: GeneratorType) -> None:
         """Increment global count of a generator type."""

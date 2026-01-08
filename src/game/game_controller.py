@@ -1,6 +1,6 @@
 """Main game controller coordinating all game systems."""
 
-from typing import Dict, List
+from typing import Dict
 
 from ..ai.decision_maker import DecisionMaker
 from ..models.enums import GeneratorType, LogType, ResourceType
@@ -24,59 +24,6 @@ class GameController:
     def initialize(self) -> None:
         """Initialize the game."""
         self.game_state.initialize_game()
-
-    def execute_turn(self) -> None:
-        """Execute one nation's turn completely."""
-        current_nation = self.game_state.get_current_nation()
-        if not current_nation:
-            return
-
-        print(f"Current Nation: {current_nation.name} (Era {current_nation.era.value})")
-
-        # Start turn (resource generation, era advancement)
-        self.turn_manager.start_turn(current_nation.id)
-
-        # Get AI decision for ALL actions at once
-        era_reqs = self.game_state.get_era_advancement_requirements(current_nation.era)
-        era_reqs_dict = {k.value: v for k, v in era_reqs.items()} if era_reqs else {}
-        game_state_summary = self._build_game_state_summary()
-
-        print(f"Making AI decision for all actions...")
-        decision, prompt, response = self.decision_maker.decide_all_actions(
-            current_nation, game_state_summary, era_reqs_dict
-        )
-
-        # Log the AI decision
-        log_entry = self.game_state.game_log.add_entry(
-            log_type=LogType.AI_DECISION,
-            turn_number=self.game_state.turn_number,
-            summary=f"{current_nation.name} planning turn actions",
-            nations_involved=[current_nation.id],
-            details={"decision": decision},
-        )
-        log_entry.add_ai_decision(current_nation.id, prompt, response)
-
-        # Execute the planned actions
-        actions = decision.get("actions", [])
-        print(f"Executing {len(actions)} actions...")
-
-        # Execute TRADE actions first
-        for action in actions:
-            if action.get("type") == "TRADE":
-                self._execute_trade_action(current_nation, action)
-
-        # Then execute BUILD actions
-        for action in actions:
-            if action.get("type") == "BUILD":
-                self._execute_build_from_plan(current_nation, action)
-
-        # End turn
-        self.turn_manager.end_turn()
-        print(f"Turn ended for {current_nation.name}")
-
-    def _get_available_actions(self) -> List[str]:
-        """Get list of available actions for the nation."""
-        return ["SELL", "BUY", "BUILD", "PASS"]
 
     def _build_game_state_summary(self) -> Dict:
         """Build a summary of the game state for AI decision-making."""
@@ -118,103 +65,6 @@ class GameController:
             "turn_number": self.game_state.turn_number,
         }
 
-    def _execute_sell_action(self, nation_id: int, available_actions: List[str]) -> None:
-        """Execute a sell/trade action."""
-        if "SELL" not in available_actions and "BUY" not in available_actions:
-            return
-
-        nation = self.game_state.get_nation(nation_id)
-        if not nation:
-            return
-
-        # Get era requirements
-        era_reqs = self.game_state.get_era_advancement_requirements(nation.era)
-        era_reqs_dict = {k.value: v for k, v in era_reqs.items()} if era_reqs else {}
-
-        # Build game state
-        game_state_summary = self._build_game_state_summary()
-
-        # Ask AI for decision
-        decision, prompt, response = self.decision_maker.decide_action(
-            nation, game_state_summary, available_actions, era_reqs_dict
-        )
-
-        # Log AI decision
-        log_entry = self.game_state.game_log.add_entry(
-            log_type=LogType.AI_DECISION,
-            turn_number=self.game_state.turn_number,
-            summary=f"{nation.name} AI decided on {decision.get("action")} action",
-            nations_involved=[nation_id],
-            details={"action_type": "SELL"},
-        )
-        log_entry.add_ai_decision(nation_id, prompt, response)
-
-        # Process decision
-        if decision.get("action") in ["SELL", "BUY"]:
-            self._process_trade_decision(nation, decision)
-
-    def _execute_buy_action(self) -> None:
-        """Execute a buy action (similar to sell, trading is bilateral)."""
-        # In this implementation, SELL and BUY are the same
-        # We already handled it in _execute_sell_action
-        pass
-
-    def _execute_build_action(self, nation_id: int, available_actions: List[str]) -> None:
-        """Execute a build action."""
-        if "BUILD" not in available_actions:
-            return
-
-        nation = self.game_state.get_nation(nation_id)
-        if not nation:
-            return
-
-        # Get era requirements
-        era_reqs = self.game_state.get_era_advancement_requirements(nation.era)
-        era_reqs_dict = {k.value: v for k, v in era_reqs.items()} if era_reqs else {}
-
-        # Build game state
-        game_state_summary = self._build_game_state_summary()
-
-        # Ask AI for decision
-        decision, prompt, response = self.decision_maker.decide_action(
-            nation, game_state_summary, available_actions, era_reqs_dict
-        )
-
-        # Log AI decision
-        log_entry = self.game_state.game_log.add_entry(
-            log_type=LogType.AI_DECISION,
-            turn_number=self.game_state.turn_number,
-            summary=f"{nation.name} AI decided on BUILD action",
-            nations_involved=[nation_id],
-            details={"action_type": "BUILD"},
-        )
-        log_entry.add_ai_decision(nation_id, prompt, response)
-
-        # Process decision
-        if decision.get("action") == "BUILD":
-            self._process_build_decision(nation, decision)
-
-    def _process_trade_decision(self, nation, decision: Dict) -> None:
-        """Process a trade decision from AI."""
-        details = decision.get("details", {})
-        target_id = details.get("target_nation_id")
-
-        if target_id is None:
-            return
-
-        # Parse trade offer
-        trade_offer = self.decision_maker.parse_trade_offer(details)
-        if not trade_offer or not trade_offer.is_valid():
-            return
-
-        # Propose trade
-        transaction = self.trading_manager.propose_trade(
-            nation.id, target_id, trade_offer
-        )
-
-        if transaction:
-            # Ask target nation to respond
-            self._process_trade_response(transaction)
 
     def _process_trade_response(self, transaction: Transaction) -> None:
         """Process the responder's decision on a trade."""
@@ -239,13 +89,17 @@ class GameController:
             game_state_summary,
         )
 
-        # Log AI decision
+        # Log AI decision with trade offer details
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
+            round_number=self.game_state.round_number,
             summary=f"{responder.name} AI responding to trade",
-            nations_involved=[responder.id],
-            details={"action_type": "TRADE_RESPONSE"},
+            nations_involved=[initiator.id, responder.id],  # Include both nations
+            details={
+                "action_type": "TRADE_RESPONSE",
+                "offer": transaction.current_offer.to_dict()  # Include the trade offer
+            },
         )
         log_entry.add_ai_decision(responder.id, prompt, response)
 
@@ -284,6 +138,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
+            round_number=self.game_state.round_number,
             summary=f"{initiator.name} AI responding to counter-offer",
             nations_involved=[initiator.id],
             details={"action_type": "COUNTER_RESPONSE"},
@@ -296,19 +151,6 @@ class GameController:
         else:
             self.trading_manager.reject_trade(transaction)
 
-    def _process_build_decision(self, nation, decision: Dict) -> None:
-        """Process a build decision from AI."""
-        details = decision.get("details", {})
-        gen_type_str = details.get("generator_type")
-
-        if not gen_type_str:
-            return
-
-        try:
-            generator_type = GeneratorType[gen_type_str.upper()]
-            self.building_manager.build_generator(nation, generator_type)
-        except (KeyError, ValueError):
-            pass
 
     def _execute_trade_action(self, nation, action: Dict) -> None:
         """Execute a trade action from the combined turn plan."""
@@ -361,10 +203,34 @@ class GameController:
 
         try:
             generator_type = GeneratorType[gen_type_str.upper()]
-            self.building_manager.build_generator(nation, generator_type)
-        except (KeyError, ValueError):
-            pass
+            success, message = self.building_manager.build_generator(nation, generator_type)
 
-    def get_game_state(self) -> GameState:
-        """Get the current game state."""
-        return self.game_state
+            if not success:
+                # Log the failed build attempt
+                from ..models.enums import LogType
+                self.game_state.game_log.add_entry(
+                    log_type=LogType.BUILD,
+                    turn_number=self.game_state.turn_number,
+                    round_number=self.game_state.round_number,
+                    summary=f"{nation.name} failed to build {gen_type_str}: {message}",
+                    nations_involved=[nation.id],
+                    details={
+                        "generator_type": gen_type_str,
+                        "failure_reason": message,
+                    },
+                )
+        except (KeyError, ValueError) as e:
+            # Log invalid generator type
+            from ..models.enums import LogType
+            self.game_state.game_log.add_entry(
+                log_type=LogType.BUILD,
+                turn_number=self.game_state.turn_number,
+                round_number=self.game_state.round_number,
+                summary=f"{nation.name} failed to build: invalid generator type '{gen_type_str}'",
+                nations_involved=[nation.id],
+                details={
+                    "generator_type": gen_type_str,
+                    "failure_reason": str(e),
+                },
+            )
+

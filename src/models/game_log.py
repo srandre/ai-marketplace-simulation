@@ -27,6 +27,7 @@ class LogEntry(BaseModel):
 
     log_type: LogType
     turn_number: int
+    round_number: int = Field(default=1)  # Round number when this log was created
     timestamp: datetime = Field(default_factory=datetime.now)
     nations_involved: List[int] = Field(default_factory=list)
     summary: str
@@ -62,6 +63,7 @@ class GameLog(BaseModel):
         log_type: LogType,
         turn_number: int,
         summary: str,
+        round_number: int = 1,
         nations_involved: List[int] = None,
         details: Dict[str, Any] = None,
     ) -> LogEntry:
@@ -69,6 +71,7 @@ class GameLog(BaseModel):
         entry = LogEntry(
             log_type=log_type,
             turn_number=turn_number,
+            round_number=round_number,
             summary=summary,
             nations_involved=nations_involved or [],
             details=details or {},

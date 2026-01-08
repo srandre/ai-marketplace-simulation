@@ -116,19 +116,60 @@ class AsyncTurnExecutor:
                 current_nation, game_state_summary, era_reqs_dict
             )
 
-            # Log the AI decision
+            # Log the AI decision with trade details if present
             from ..models.enums import LogType
+            actions = decision.get("actions", [])
+
+            # Extract trade actions for logging
+            trade_actions = [a for a in actions if a.get("type") == "TRADE"]
+            nations_involved = [current_nation.id]
+            log_details = {"decision": decision}
+
+            # Add trade offers to details and involved nations
+            if trade_actions:
+                log_details["trade_offers"] = []
+                for trade_action in trade_actions:
+                    target_id = trade_action.get("target_nation_id")
+                    if target_id is not None and target_id not in nations_involved:
+                        nations_involved.append(target_id)
+                    log_details["trade_offers"].append({
+                        "target_nation_id": target_id,
+                        "offering": trade_action.get("offering", {}),
+                        "requesting": trade_action.get("requesting", {})
+                    })
+
+            # Create summary based on actions taken
+            action_summaries = []
+            for action in actions:
+                action_type = action.get("type")
+                if action_type == "TRADE":
+                    target_id = action.get("target_nation_id")
+                    if target_id is not None:
+                        target_nation = self.controller.game_state.get_nation(target_id)
+                        if target_nation:
+                            action_summaries.append(f"trade with {target_nation.name}")
+                        else:
+                            action_summaries.append("trade")
+                elif action_type == "BUILD":
+                    gen_type = action.get("generator_type", "generator")
+                    action_summaries.append(f"build {gen_type}")
+                elif action_type == "PASS":
+                    action_summaries.append("pass")
+
+            if action_summaries:
+                summary = f"{current_nation.name}: {', '.join(action_summaries)}"
+            else:
+                summary = f"{current_nation.name}: no actions"
+
             log_entry = self.controller.game_state.game_log.add_entry(
                 log_type=LogType.AI_DECISION,
                 turn_number=self.controller.game_state.turn_number,
-                summary=f"{current_nation.name} planning turn actions",
-                nations_involved=[current_nation.id],
-                details={"decision": decision},
+                round_number=self.controller.game_state.round_number,
+                summary=summary,
+                nations_involved=nations_involved,
+                details=log_details,
             )
             log_entry.add_ai_decision(current_nation.id, prompt, response)
-
-            # Execute the planned actions
-            actions = decision.get("actions", [])
 
             # Execute TRADE actions first
             for action in actions:

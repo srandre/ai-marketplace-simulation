@@ -3,6 +3,7 @@
 game:
   num_players: 10
   initial_turn_number: 1
+  initial_era: 1  # Starting era for all players (0=Origin, 1=Structuring, 2=Information)
   auto_mode_delay_ms: 1000  # Delay between auto turns in milliseconds
 
 eras:

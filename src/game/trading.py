@@ -46,21 +46,8 @@ class TradingManager:
             turn_number=self.game_state.turn_number,
         )
 
-        # Log the proposal
-        offer_str = ", ".join(
-            f"{v} {k.value}" for k, v in offer.offering.items() if v > 0
-        )
-        request_str = ", ".join(
-            f"{v} {k.value}" for k, v in offer.requesting.items() if v > 0
-        )
-
-        self.game_state.game_log.add_entry(
-            log_type=LogType.TRADE_PROPOSAL,
-            turn_number=self.game_state.turn_number,
-            summary=f"{initiator.name} proposes to {responder.name}: Offer [{offer_str}] for [{request_str}]",
-            nations_involved=[initiator_id, responder_id],
-            details={"offer": offer.to_dict()},
-        )
+        # Note: Trade proposal is now logged as part of the AI decision in async_turn_executor
+        # No separate log entry needed here
 
         return transaction
 
@@ -137,6 +124,7 @@ class TradingManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.TRADE_COMPLETED,
             turn_number=self.game_state.turn_number,
+            round_number=self.game_state.round_number,
             summary=f"{initiator.name} and {responder.name} completed trade",
             nations_involved=[transaction.initiator_id, transaction.responder_id],
             details={"offer": active_offer.to_dict()},
@@ -169,13 +157,8 @@ class TradingManager:
             config.get("diplomacy.relationship_max", 100),
         )
 
-        # Log the rejection
-        self.game_state.game_log.add_entry(
-            log_type=LogType.TRADE_REJECTED,
-            turn_number=self.game_state.turn_number,
-            summary=f"{responder.name} rejected trade from {initiator.name}",
-            nations_involved=[transaction.initiator_id, transaction.responder_id],
-        )
+        # Note: Trade rejection is now shown in the AI decision log
+        # No separate log entry needed here
 
     def counter_propose(
         self, transaction: Transaction, counter_offer: TradeOffer
@@ -199,19 +182,14 @@ class TradingManager:
 
         transaction.counter_propose(counter_offer)
 
-        # Log the counter-proposal
+        # Log the counter-proposal (simplified - details stored for later viewing)
         initiator = self.game_state.get_nation(transaction.initiator_id)
-        offer_str = ", ".join(
-            f"{v} {k.value}" for k, v in counter_offer.offering.items() if v > 0
-        )
-        request_str = ", ".join(
-            f"{v} {k.value}" for k, v in counter_offer.requesting.items() if v > 0
-        )
 
         self.game_state.game_log.add_entry(
             log_type=LogType.TRADE_COUNTER,
             turn_number=self.game_state.turn_number,
-            summary=f"{responder.name} counters {initiator.name}: Offer [{offer_str}] for [{request_str}]",
+            round_number=self.game_state.round_number,
+            summary=f"{responder.name} counters {initiator.name}",
             nations_involved=[transaction.initiator_id, transaction.responder_id],
             details={"counter_offer": counter_offer.to_dict()},
         )

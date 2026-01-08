@@ -7,7 +7,6 @@ from ..models.nation import Nation
 from ..models.transaction import TradeOffer
 from .deepseek_client import DeepSeekClient
 from .prompts import (
-    create_action_decision_prompt,
     create_combined_turn_decision_prompt,
     create_counter_offer_response_prompt,
     create_system_prompt,
@@ -44,34 +43,6 @@ class DecisionMaker:
 
         decision, raw_response = self.client.make_decision_with_fallback(
             self.system_prompt, user_prompt, default_decision
-        )
-
-        return decision, user_prompt, raw_response
-
-    def decide_action(
-        self,
-        nation: Nation,
-        game_state: Dict[str, Any],
-        available_actions: List[str],
-        era_requirements: Dict[str, int],
-    ) -> tuple[Dict[str, Any], str, str]:
-        """
-        Decide what action the nation should take (legacy - single action).
-
-        Returns (decision_dict, user_prompt, ai_response).
-        """
-        user_prompt = create_action_decision_prompt(
-            nation, game_state, available_actions, era_requirements
-        )
-
-        default_action = {
-            "action": "PASS",
-            "reasoning": "No action taken",
-            "details": {},
-        }
-
-        decision, raw_response = self.client.make_decision_with_fallback(
-            self.system_prompt, user_prompt, default_action
         )
 
         return decision, user_prompt, raw_response

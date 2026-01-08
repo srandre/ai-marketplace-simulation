@@ -36,15 +36,15 @@ class TurnManager:
         generated = nation.generate_resources(era_multiplier)
 
         if generated:
-            generation_summary = ", ".join(
-                f"{amount} {resource.value}"
-                for resource, amount in generated.items()
-            )
+            from ..ui.resource_display import format_resources_dict
+
+            generation_summary = format_resources_dict(generated)
 
             self.game_state.game_log.add_entry(
                 log_type=LogType.GENERATION,
                 turn_number=self.game_state.turn_number,
-                summary=f"{nation.name} generated: {generation_summary}",
+                round_number=self.game_state.round_number,
+                summary=f"{nation.name} generated {generation_summary}",
                 nations_involved=[nation.id],
                 details={"generated": {k.value: v for k, v in generated.items()}},
             )
@@ -65,6 +65,7 @@ class TurnManager:
             self.game_state.game_log.add_entry(
                 log_type=LogType.ERA_ADVANCEMENT,
                 turn_number=self.game_state.turn_number,
+                round_number=self.game_state.round_number,
                 summary=f"{nation.name} advanced to {nation.era.name}!",
                 nations_involved=[nation.id],
                 details={

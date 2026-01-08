@@ -74,7 +74,7 @@ class BuildingManager:
             if not resource_type:
                 return False, "Insufficient resources"
 
-            required_amount = blueprint.base_cost_any * (count_built + 1)
+            required_amount = blueprint.base_cost_any * (2 ** count_built)
             nation.inventory.remove(resource_type, required_amount)
 
             cost_paid = {resource_type: required_amount}
@@ -97,10 +97,13 @@ class BuildingManager:
         self.game_state._increment_generator_count(generator_type)
 
         # Log the build
-        cost_str = ", ".join(f"{v} {k.value}" for k, v in cost_paid.items())
+        from ..ui.resource_display import get_resource_emoji
+        cost_parts = [f"{v} {get_resource_emoji(k)}" for k, v in cost_paid.items()]
+        cost_str = ", ".join(cost_parts)
         self.game_state.game_log.add_entry(
             log_type=LogType.BUILD,
             turn_number=self.game_state.turn_number,
+            round_number=self.game_state.round_number,
             summary=f"{nation.name} built {blueprint.name} for {cost_str}",
             nations_involved=[nation.id],
             details={

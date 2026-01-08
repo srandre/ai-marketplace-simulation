@@ -42,9 +42,9 @@ class GeneratorBlueprint(BaseModel):
         """
         Calculate current cost based on progressive pricing.
 
-        Formula: current_cost = base_cost * (count_built + 1)
+        Formula: current_cost = base_cost * (2^count_built)
         """
-        multiplier = count_built + 1
+        multiplier = 2 ** count_built
         return {
             resource_type: cost * multiplier
             for resource_type, cost in self.base_cost.items()
@@ -57,11 +57,12 @@ class GeneratorBlueprint(BaseModel):
         Check if can pay with any single resource (for Farm).
 
         Returns the resource type that can be used, or None.
+        Formula: required_amount = base_cost_any * (2^count_built)
         """
         if self.base_cost_any is None:
             return None
 
-        required_amount = self.base_cost_any * (count_built + 1)
+        required_amount = self.base_cost_any * (2 ** count_built)
 
         for resource_type in ResourceType:
             if inventory.has(resource_type, required_amount):
