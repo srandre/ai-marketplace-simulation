@@ -55,6 +55,7 @@ class MainWindow:
         self.logs_scroll_offset = 0
         self.selected_log = None  # Currently selected log for detailed view
         self.detail_scroll_offset = 0  # Scroll offset for detail panel
+        self.detail_content_height = 0  # Actual content height of detail panel
 
         # Scrollbar dragging state
         self.dragging_scrollbar = None  # 'logs' or 'detail'
@@ -708,18 +709,17 @@ class MainWindow:
         elif self.dragging_scrollbar == 'detail':
             scrollbar_rect = self._get_scrollbar_rect(self.panel_detail.rect)
 
-            # For detail panel, we need to calculate actual content height
-            # This is a rough estimate - in a better implementation we'd track actual content height
+            # Use actual content height tracked during drawing
             visible_height = self.panel_detail.rect.height - 50
-            estimated_content = visible_height * 3
-            max_scroll = max(0, estimated_content)
+            total_content = max(visible_height, self.detail_content_height)
+            max_scroll = max(0, total_content - visible_height)
 
             # Calculate how much the mouse moved
             mouse_delta = mouse_pos[1] - self.drag_start_y
 
             # Convert mouse movement to scroll movement
             scrollbar_height = scrollbar_rect.height
-            thumb_height = max(20, int((visible_height / estimated_content) * scrollbar_height))
+            thumb_height = max(20, int((visible_height / total_content) * scrollbar_height))
             scrollable_area = scrollbar_height - thumb_height
 
             if scrollable_area > 0:
@@ -1024,6 +1024,7 @@ class MainWindow:
 
         # Calculate total content height and draw scrollbar
         total_content_height = y - y_start + self.detail_scroll_offset
+        self.detail_content_height = total_content_height  # Store for scrollbar dragging
         visible_height = self.panel_detail.rect.height - 50
         self._draw_scrollbar(self.panel_detail.rect, self.detail_scroll_offset,
                            total_content_height, visible_height)
