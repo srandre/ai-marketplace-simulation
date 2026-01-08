@@ -67,6 +67,10 @@ class MainWindow:
         self.tooltip_delay = 30  # frames (~0.5 seconds at 60fps)
         self.info_button_hovered = False
 
+        # Global resources tooltip state
+        self.global_resource_rects = {}  # Maps ResourceType to Rect
+        self.hovered_global_resource = None
+
         # Modal state
         self.show_system_prompt_modal = False
         self.modal_scroll_offset = 0
@@ -393,6 +397,13 @@ class MainWindow:
         mouse_pos = pygame.mouse.get_pos()
         self.info_button_hovered = self.info_button_rect.collidepoint(mouse_pos)
 
+        # Update global resource hover state
+        self.hovered_global_resource = None
+        for rt, rect in self.global_resource_rects.items():
+            if rect.collidepoint(mouse_pos):
+                self.hovered_global_resource = rt
+                break
+
         # Update tooltip timer
         if self.panel_logs.rect.collidepoint(mouse_pos):
             hovered_log = self._get_log_at_position(mouse_pos)
@@ -440,6 +451,10 @@ class MainWindow:
         # Draw tooltip for info button if hovered
         if self.info_button_hovered and not self.show_system_prompt_modal:
             self._draw_info_tooltip()
+
+        # Draw tooltip for global resources if hovered
+        if self.hovered_global_resource and not self.show_system_prompt_modal:
+            self._draw_global_resource_tooltip()
 
         # Draw tooltip for logs if applicable
         if self.tooltip_log and self.tooltip_timer >= self.tooltip_delay:
@@ -599,12 +614,25 @@ class MainWindow:
         label = self.font_small.render("Global Resources:", True, colors.TEXT_SECONDARY)
         self.screen.blit(label, (x, y - 5))
 
+        # Clear previous rects
+        self.global_resource_rects = {}
+
         # Draw each resource with emoji + number
         for rt in ResourceType:
             total = totals[rt]
             emoji = get_resource_emoji(rt)
             resource_text = f"{emoji}{total}"
             text = self.font_small.render(resource_text, True, colors.TEXT)
+
+            # Store rectangle for hover detection
+            text_rect = text.get_rect(topleft=(x, y + 15))
+            self.global_resource_rects[rt] = text_rect
+
+            # Highlight if hovered
+            if self.hovered_global_resource == rt:
+                highlight_rect = text_rect.inflate(6, 4)
+                draw_rounded_rect_border(self.screen, colors.ACCENT, highlight_rect, width=2, border_radius=4)
+
             self.screen.blit(text, (x, y + 15))
             x += 100  # Fixed spacing between resources
 
@@ -757,10 +785,10 @@ class MainWindow:
             # Highlight selected log
             if self.selected_log == log:
                 highlight_rect = pygame.Rect(
-                    self.panel_logs.rect.x + 5,
-                    y - 2,
-                    self.panel_logs.rect.width - 10,
-                    line_height
+                    self.panel_logs.rect.x + 8,
+                    y - 1,
+                    self.panel_logs.rect.width - 30,  # Account for margins and scrollbar
+                    line_height - 2
                 )
                 draw_rounded_rect_border(self.screen, colors.ACCENT, highlight_rect, width=2, border_radius=5)
 
@@ -1269,6 +1297,87 @@ class MainWindow:
         draw_rounded_rect(self.screen, colors.SECONDARY, tooltip_rect, border_radius=8)
         draw_rounded_rect_border(self.screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
         self.screen.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))
+
+    def _draw_global_resource_tooltip(self) -> None:
+        """Draw tooltip for global resources showing generator count and cost."""
+        from ..models.enums import GeneratorType
+
+        # Map resource types to their generator types
+        resource_to_generator = {
+            ResourceType.GOLD: GeneratorType.MINE,
+            ResourceType.WOOD: GeneratorType.LUMBER_CAMP,
+            ResourceType.STONE: GeneratorType.QUARRY,
+            ResourceType.FOOD: GeneratorType.FARM,
+            ResourceType.TECHNOLOGY: GeneratorType.FACTORY,
+            ResourceType.INFORMATION: GeneratorType.DATACENTER,
+        }
+
+        rt = self.hovered_global_resource
+        if rt not in resource_to_generator:
+            return
+
+        gen_type = resource_to_generator[rt]
+        count = self.controller.game_state.get_generator_count(gen_type)
+        blueprint = self.controller.game_state.generator_manager.get_blueprint(gen_type)
+
+        if not blueprint:
+            return
+
+        # Build tooltip text
+        lines = []
+        lines.append(f"{blueprint.name}")
+        lines.append(f"Built: {count}")
+
+        # Show cost for next one
+        if blueprint.base_cost_either:
+            # Farm case - show both options
+            multiplier = 2 ** count
+            options = []
+            for res_type, base_amount in blueprint.base_cost_either.items():
+                cost = base_amount * multiplier
+                emoji = get_resource_emoji(res_type)
+                options.append(f"{cost} {emoji}")
+            lines.append(f"Cost: {' or '.join(options)}")
+        else:
+            # Normal case
+            current_cost = blueprint.get_current_cost(count)
+            cost_parts = []
+            for res_type, amount in current_cost.items():
+                emoji = get_resource_emoji(res_type)
+                cost_parts.append(f"{amount} {emoji}")
+            lines.append(f"Cost: {' + '.join(cost_parts)}")
+
+        # Calculate tooltip size
+        padding = 10
+        line_height = 20
+        max_width = max(self.font_small.size(line)[0] for line in lines)
+        tooltip_width = max_width + padding * 2
+        tooltip_height = len(lines) * line_height + padding * 2
+
+        # Position above the resource
+        resource_rect = self.global_resource_rects[rt]
+        tooltip_x = resource_rect.centerx - tooltip_width // 2
+        tooltip_y = resource_rect.top - tooltip_height - 10
+
+        # Keep on screen
+        if tooltip_x < 0:
+            tooltip_x = 0
+        if tooltip_x + tooltip_width > self.width:
+            tooltip_x = self.width - tooltip_width
+        if tooltip_y < 0:
+            tooltip_y = resource_rect.bottom + 10
+
+        # Draw tooltip background
+        tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
+        draw_rounded_rect(self.screen, colors.SECONDARY, tooltip_rect, border_radius=8)
+        draw_rounded_rect_border(self.screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
+
+        # Draw text lines
+        y = tooltip_y + padding
+        for line in lines:
+            text_surf = self.font_small.render(line, True, colors.TEXT)
+            self.screen.blit(text_surf, (tooltip_x + padding, y))
+            y += line_height
 
     def _get_modal_rect(self) -> pygame.Rect:
         """Get the modal rectangle."""

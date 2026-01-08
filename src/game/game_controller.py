@@ -47,17 +47,24 @@ class GameController:
         generator_costs = {}
         for gen_type in GeneratorType:
             count = self.game_state.get_generator_count(gen_type)
+            print(f'{gen_type}: {count}')
             blueprint = self.game_state.generator_manager.get_blueprint(gen_type)
             if blueprint:
                 cost = blueprint.get_current_cost(count)
                 cost_info = {
                     k.value: v for k, v in cost.items()
                 }
-                # Add base_cost_any if applicable (e.g., Farm)
-                if blueprint.base_cost_any is not None:
-                    required = blueprint.base_cost_any * (count + 1)
-                    cost_info["cost_any_resource"] = required
+                # Add base_cost_either if applicable (e.g., Farm can pay with WOOD or STONE)
+                if blueprint.base_cost_either is not None:
+                    multiplier = 2 ** count
+                    cost_either = {
+                        rt.value: amount * multiplier
+                        for rt, amount in blueprint.base_cost_either.items()
+                    }
+                    cost_info["cost_either"] = cost_either
                 generator_costs[gen_type.value] = cost_info
+
+        print(generator_costs)
 
         return {
             "nations": nations_summary,

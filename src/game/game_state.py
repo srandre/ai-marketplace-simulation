@@ -104,12 +104,18 @@ class GameState(BaseModel):
                     for resource_str, amount in gen_config["base_cost"].items():
                         base_cost[ResourceType[resource_str]] = amount
 
+                base_cost_either = None
+                if "base_cost_either" in gen_config:
+                    base_cost_either = {}
+                    for resource_str, amount in gen_config["base_cost_either"].items():
+                        base_cost_either[ResourceType[resource_str]] = amount
+
                 blueprint = GeneratorBlueprint(
                     generator_type=generator_type,
                     name=gen_config["name"],
                     produces=produces,
                     base_cost=base_cost,
-                    base_cost_any=gen_config.get("base_cost_any"),
+                    base_cost_either=base_cost_either,
                     required_era=gen_config.get("required_era", 0),
                 )
 

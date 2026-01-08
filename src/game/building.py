@@ -30,14 +30,16 @@ class BuildingManager:
         # Check resources
         count_built = self.game_state.get_generator_count(generator_type)
 
-        # Special case: Farm can pay with any resource
-        if blueprint.base_cost_any is not None:
-            resource_type = blueprint.can_pay_with_any(nation.inventory, count_built)
+        # Special case: Farm can pay with either WOOD or STONE
+        if blueprint.base_cost_either is not None:
+            resource_type = blueprint.can_pay_with_either(nation.inventory, count_built)
             if resource_type:
                 return True, f"Can pay with {resource_type.value}"
             else:
-                required = blueprint.base_cost_any * (count_built + 1)
-                return False, f"Need {required} of any resource"
+                # Show which resources are accepted
+                multiplier = 2 ** count_built
+                options = [f"{amount * multiplier} {rt.value}" for rt, amount in blueprint.base_cost_either.items()]
+                return False, f"Need either: {' or '.join(options)}"
 
         # Normal case: specific resources required
         current_cost = blueprint.get_current_cost(count_built)
@@ -75,21 +77,27 @@ class BuildingManager:
         count_built = self.game_state.get_generator_count(generator_type)
 
         # Deduct resources
-        if blueprint.base_cost_any is not None:
-            # Farm case - can pay with any single resource
-            required_amount = blueprint.base_cost_any * (2 ** count_built)
+        if blueprint.base_cost_either is not None:
+            # Farm case - can pay with either WOOD or STONE
+            multiplier = 2 ** count_built
 
             # Use specified payment resource if provided
             if payment_resource is not None:
+                if payment_resource not in blueprint.base_cost_either:
+                    options = [rt.value for rt in blueprint.base_cost_either.keys()]
+                    return False, f"Invalid payment resource. Must be one of: {', '.join(options)}"
+
+                required_amount = blueprint.base_cost_either[payment_resource] * multiplier
                 if not nation.inventory.has(payment_resource, required_amount):
                     return False, f"Insufficient {payment_resource.value}: need {required_amount}, have {nation.inventory.get(payment_resource)}"
                 resource_type = payment_resource
             else:
                 # Fall back to automatic selection
-                resource_type = blueprint.can_pay_with_any(nation.inventory, count_built)
+                resource_type = blueprint.can_pay_with_either(nation.inventory, count_built)
                 if not resource_type:
                     return False, "Insufficient resources"
 
+            required_amount = blueprint.base_cost_either[resource_type] * multiplier
             nation.inventory.remove(resource_type, required_amount)
             cost_paid = {resource_type: required_amount}
         else:

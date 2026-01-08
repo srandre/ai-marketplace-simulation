@@ -89,7 +89,9 @@ generators:
   FARM:
     name: "Farm"
     produces: FOOD
-    base_cost_any: 10  # Can pay with any single resource
+    base_cost_either:
+      WOOD: 10
+      STONE: 10
     required_era: 0
 
   MINE:
@@ -115,11 +117,6 @@ generators:
       GOLD: 1000
       TECHNOLOGY: 200
     required_era: 2
-
-# Progressive pricing: price = base_cost * (total_generators_of_type + 1)
-pricing:
-  use_progressive_pricing: true
-  # Formula: current_price = base_price * (count_built + 1)
 
 # Era advancement requirements
 era_advancement:

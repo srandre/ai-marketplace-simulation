@@ -35,7 +35,7 @@ class GeneratorBlueprint(BaseModel):
     name: str
     produces: ResourceType
     base_cost: Dict[ResourceType, int] = Field(default_factory=dict)
-    base_cost_any: Optional[int] = None  # For Farm which accepts any resource
+    base_cost_either: Optional[Dict[ResourceType, int]] = None  # For Farm which accepts WOOD or STONE
     required_era: int = Field(default=0)
 
     def get_current_cost(self, count_built: int) -> Dict[ResourceType, int]:
@@ -50,21 +50,23 @@ class GeneratorBlueprint(BaseModel):
             for resource_type, cost in self.base_cost.items()
         }
 
-    def can_pay_with_any(
+    def can_pay_with_either(
         self, inventory: "ResourceInventory", count_built: int
     ) -> Optional[ResourceType]:
         """
-        Check if can pay with any single resource (for Farm).
+        Check if can pay with either WOOD or STONE (for Farm).
 
         Returns the resource type that can be used, or None.
-        Formula: required_amount = base_cost_any * (2^count_built)
+        Formula: required_amount = base_cost * (2^count_built)
         """
-        if self.base_cost_any is None:
+        if self.base_cost_either is None:
             return None
 
-        required_amount = self.base_cost_any * (2 ** count_built)
+        multiplier = 2 ** count_built
 
-        for resource_type in ResourceType:
+        # Check each allowed resource type
+        for resource_type, base_amount in self.base_cost_either.items():
+            required_amount = base_amount * multiplier
             if inventory.has(resource_type, required_amount):
                 return resource_type
 

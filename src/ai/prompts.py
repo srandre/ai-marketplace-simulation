@@ -18,8 +18,10 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
 
     for gen_type, blueprint in blueprints.items():
         # Format the cost
-        if blueprint.base_cost_any is not None:
-            cost_str = f"{blueprint.base_cost_any} of any single resource"
+        if blueprint.base_cost_either is not None:
+            # Farm case: can pay with either WOOD or STONE
+            cost_parts = [f"{amount} {res_type.name}" for res_type, amount in blueprint.base_cost_either.items()]
+            cost_str = " OR ".join(cost_parts)
         else:
             cost_parts = [f"{amount} {res_type.name}" for res_type, amount in blueprint.base_cost.items()]
             cost_str = " + ".join(cost_parts)
@@ -177,7 +179,7 @@ RULES:
 - Check generator_costs for exact prices
 - One side of trade must be ONLY GOLD, other side NO GOLD
 - IMPORTANT: Before proposing a trade, verify the target nation HAS the resources you're requesting
-- When building a FARM, you MUST specify payment_resource (WOOD, STONE or FOOD) since Farm can be built with any of those resources
+- When building a FARM, you MUST specify payment_resource (WOOD or STONE) since Farm can be built with either of those resources
 
 Plan your turn to advance toward the next era!"""
 
