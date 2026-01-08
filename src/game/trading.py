@@ -55,7 +55,7 @@ class TradingManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.TRADE_PROPOSAL,
             turn_number=self.game_state.turn_number,
-            summary=f"{initiator.flag} proposes to {responder.flag}: Offer [{offer_str}] for [{request_str}]",
+            summary=f"{initiator.name} proposes to {responder.name}: Offer [{offer_str}] for [{request_str}]",
             nations_involved=[initiator_id, responder_id],
             details={"offer": offer.to_dict()},
         )
@@ -135,7 +135,7 @@ class TradingManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.TRADE_COMPLETED,
             turn_number=self.game_state.turn_number,
-            summary=f"{initiator.flag} and {responder.flag} completed trade",
+            summary=f"{initiator.name} and {responder.name} completed trade",
             nations_involved=[transaction.initiator_id, transaction.responder_id],
             details={"offer": active_offer.to_dict()},
         )
@@ -171,7 +171,7 @@ class TradingManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.TRADE_REJECTED,
             turn_number=self.game_state.turn_number,
-            summary=f"{responder.flag} rejected trade from {initiator.flag}",
+            summary=f"{responder.name} rejected trade from {initiator.name}",
             nations_involved=[transaction.initiator_id, transaction.responder_id],
         )
 
@@ -209,7 +209,7 @@ class TradingManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.TRADE_COUNTER,
             turn_number=self.game_state.turn_number,
-            summary=f"{responder.flag} counters {initiator.flag}: Offer [{offer_str}] for [{request_str}]",
+            summary=f"{responder.name} counters {initiator.name}: Offer [{offer_str}] for [{request_str}]",
             nations_involved=[transaction.initiator_id, transaction.responder_id],
             details={"counter_offer": counter_offer.to_dict()},
         )

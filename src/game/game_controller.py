@@ -117,7 +117,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
-            summary=f"{nation.flag} AI deciding on SELL action",
+            summary=f"{nation.name} AI deciding on SELL action",
             nations_involved=[nation_id],
             details={"action_type": "SELL"},
         )
@@ -158,7 +158,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
-            summary=f"{nation.flag} AI deciding on BUILD action",
+            summary=f"{nation.name} AI deciding on BUILD action",
             nations_involved=[nation_id],
             details={"action_type": "BUILD"},
         )
@@ -217,7 +217,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
-            summary=f"{responder.flag} AI responding to trade",
+            summary=f"{responder.name} AI responding to trade",
             nations_involved=[responder.id],
             details={"action_type": "TRADE_RESPONSE"},
         )
@@ -258,7 +258,7 @@ class GameController:
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
-            summary=f"{initiator.flag} AI responding to counter-offer",
+            summary=f"{initiator.name} AI responding to counter-offer",
             nations_involved=[initiator.id],
             details={"action_type": "COUNTER_RESPONSE"},
         )

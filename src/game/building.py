@@ -101,7 +101,7 @@ class BuildingManager:
         self.game_state.game_log.add_entry(
             log_type=LogType.BUILD,
             turn_number=self.game_state.turn_number,
-            summary=f"{nation.flag} built {blueprint.name} for {cost_str}",
+            summary=f"{nation.name} built {blueprint.name} for {cost_str}",
             nations_involved=[nation.id],
             details={
                 "generator_type": generator_type.value,

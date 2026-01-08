@@ -78,7 +78,7 @@ class Nation(BaseModel):
         return {
             "id": self.id,
             "name": self.name,
-            "flag": self.flag,
+            "code": self.code,
             "era": self.era.value,
             "resources": self.inventory.to_dict(),
             "generators": [

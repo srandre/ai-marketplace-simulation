@@ -212,7 +212,7 @@ class LogViewer:
             for ai_decision in log_entry.ai_decisions[:2]:  # Show max 2
                 nation = game_state.get_nation(ai_decision.nation_id)
                 if nation:
-                    nation_text = f"{nation.flag} {nation.name}"
+                    nation_text = f"{nation.name} {nation.name}"
                     text = font.render(nation_text, True, colors.TEXT)
                     screen.blit(text, (x + 10, y))
                     y += 20

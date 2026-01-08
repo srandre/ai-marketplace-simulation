@@ -66,7 +66,6 @@ def create_action_decision_prompt(
             other_nations.append({
                 "id": other["id"],
                 "name": other["name"],
-                "flag": other["flag"],
                 "era": other["era"],
                 "resources": other["resources"],
                 "relationship": relationship,
@@ -78,7 +77,6 @@ def create_action_decision_prompt(
     prompt_data = {
         "your_nation": {
             "name": nation.name,
-            "flag": nation.flag,
             "era": nation.era.value,
             "resources": nation.inventory.to_dict(),
             "generators": [
@@ -142,13 +140,11 @@ def create_trade_response_prompt(
     prompt_data = {
         "your_nation": {
             "name": nation.name,
-            "flag": nation.flag,
             "era": nation.era.value,
             "resources": nation.inventory.to_dict(),
         },
         "proposer": {
             "name": proposer_nation["name"],
-            "flag": proposer_nation["flag"],
             "relationship": relationship,
         },
         "offer": offer,
