@@ -7,7 +7,6 @@ from ..models.enums import ResourceType
 from ..utils.config import config
 from . import colors
 from .components import Button, Panel
-from .log_viewer import LogViewer
 
 
 class MainWindow:
@@ -50,9 +49,8 @@ class MainWindow:
         # Game state
         self.running = True
         self.auto_mode = False
-        self.log_viewer_open = False
-        self.log_viewer = LogViewer()
         self.nations_scroll_offset = 0
+        self.logs_scroll_offset = 0
 
         # Async turn execution
         from ..game.async_turn_executor import AsyncTurnExecutor
@@ -152,20 +150,18 @@ class MainWindow:
             enabled=True
         )
 
-        self.btn_view_logs = Button(
-            button_spacing * 3 + button_width * 2, button_y, button_width, button_height,
-            "View Logs",
-            self._toggle_log_viewer,
-            enabled=True
-        )
-
-        self.buttons = [self.btn_auto, self.btn_next_turn, self.btn_view_logs]
+        self.buttons = [self.btn_auto, self.btn_next_turn]
 
         # Responsive panels - calculate based on screen size
         panel_padding = 20
         nations_width = int(self.width * 0.35)  # 35% for nations list
         right_panel_width = self.width - nations_width - panel_padding * 3
-        right_panel_height = (self.height - button_height - panel_padding * 4) // 2
+
+        # Current Turn panel - smaller height (30% of available space)
+        current_turn_height = int((self.height - button_height - panel_padding * 4) * 0.3)
+
+        # Game Logs panel - larger height (70% of available space)
+        logs_height = self.height - button_height - current_turn_height - panel_padding * 4
 
         self.panel_nations = Panel(
             panel_padding,
@@ -179,16 +175,16 @@ class MainWindow:
             nations_width + panel_padding * 2,
             panel_padding,
             right_panel_width,
-            right_panel_height,
+            current_turn_height,
             "Current Turn"
         )
 
-        self.panel_resources = Panel(
+        self.panel_logs = Panel(
             nations_width + panel_padding * 2,
-            right_panel_height + panel_padding * 2,
+            current_turn_height + panel_padding * 2,
             right_panel_width,
-            right_panel_height,
-            "Resources"
+            logs_height,
+            "Game Logs"
         )
 
     def _toggle_auto_mode(self) -> None:
@@ -208,12 +204,6 @@ class MainWindow:
         """Called when turn execution completes."""
         print(f"Turn {self.controller.game_state.turn_number} complete\n")
 
-    def _toggle_log_viewer(self) -> None:
-        """Toggle log viewer window."""
-        self.log_viewer_open = not self.log_viewer_open
-        # Reset selection when opening the viewer (will default to newest log)
-        if self.log_viewer_open:
-            self.log_viewer.selected_log_id = None
 
     def handle_events(self) -> None:
         """Handle pygame events."""
@@ -228,9 +218,11 @@ class MainWindow:
                 self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
                 self._setup_ui()  # Recalculate layout
 
-            # Handle mouse wheel for nations panel scrolling
+            # Handle mouse wheel for scrolling
             if event.type == pygame.MOUSEWHEEL:
                 mouse_pos = pygame.mouse.get_pos()
+
+                # Nations panel scrolling
                 if self.panel_nations.rect.collidepoint(mouse_pos):
                     # Calculate max scroll based on content height
                     item_height = 90
@@ -241,14 +233,17 @@ class MainWindow:
                     self.nations_scroll_offset -= event.y * 30
                     self.nations_scroll_offset = max(0, min(max_scroll, self.nations_scroll_offset))
 
-            # Handle log viewer events if open
-            if self.log_viewer_open:
-                result = self.log_viewer.handle_event(event)
-                if result == "close":
-                    self.log_viewer_open = False
-                    continue
-                elif result:
-                    continue
+                # Logs panel scrolling
+                elif self.panel_logs.rect.collidepoint(mouse_pos):
+                    # Calculate max scroll based on content height
+                    line_height = 25
+                    logs_count = len(self.controller.game_state.game_log.get_recent(50))
+                    total_content_height = logs_count * line_height
+                    visible_height = self.panel_logs.rect.height - 50
+                    max_scroll = max(0, total_content_height - visible_height)
+
+                    self.logs_scroll_offset -= event.y * 30
+                    self.logs_scroll_offset = max(0, min(max_scroll, self.logs_scroll_offset))
 
             # Handle button events
             for button in self.buttons:
@@ -272,20 +267,19 @@ class MainWindow:
         # Draw panels
         self.panel_nations.draw(self.screen, self.font_medium)
         self.panel_current.draw(self.screen, self.font_medium)
-        self.panel_resources.draw(self.screen, self.font_medium)
+        self.panel_logs.draw(self.screen, self.font_medium)
 
         # Draw content
         self._draw_nations()
         self._draw_current_turn()
-        self._draw_resources()
+        self._draw_inline_logs()
 
         # Draw buttons
         for button in self.buttons:
             button.draw(self.screen, self.font_medium)
 
-        # Draw log viewer if open
-        if self.log_viewer_open:
-            self.log_viewer.draw(self.screen, self.font_small, self.controller.game_state, self.flag_images)
+        # Draw global resources in bottom bar
+        self._draw_global_resources_bar()
 
         pygame.display.flip()
 
@@ -327,17 +321,10 @@ class MainWindow:
                 continue
 
             # Draw flag image
-            if nation.name in self.flag_images:
-                flag_img = self.flag_images[nation.name]['medium']
-                self.screen.blit(flag_img, (x, y + 2))
-                text_x = x + 40
-            else:
-                # Fallback to country code if no flag image
-                country_code = self._get_country_code(nation.name)
-                code_text = self.font_medium.render(country_code, True, colors.ACCENT)
-                self.screen.blit(code_text, (x, y))
-                text_x = x + 45
-
+            flag_img = self.flag_images[nation.name]['medium']
+            self.screen.blit(flag_img, (x, y + 2))
+            text_x = x + 40
+            
             header = f"{nation.name} - Era {nation.era.value}"
             text = self.font_small.render(header, True, colors.TEXT)
             self.screen.blit(text, (text_x, y + 3))
@@ -376,94 +363,140 @@ class MainWindow:
         y = self.panel_current.rect.y + 50
 
         # Turn number
-        turn_text = f"Turn: {self.controller.game_state.turn_number}"
-        text = self.font_medium.render(turn_text, True, colors.TEXT)
-        self.screen.blit(text, (x, y))
+        turn_text = f"Turn {self.controller.game_state.turn_number}:"
+        turn_surf = self.font_medium.render(turn_text, True, colors.TEXT)
+        self.screen.blit(turn_surf, (x, y))
 
-        y += 40
+        # Nation flag
+        turn_width = self.font_medium.size(turn_text)[0]
+        flag_x = x + turn_width + 15
+        flag_img = self.flag_images[current_nation.name]['medium']
+        self.screen.blit(flag_img, (flag_x, y + 2))
 
-        # Current nation with flag
-        if current_nation.name in self.flag_images:
-            flag_img = self.flag_images[current_nation.name]['large']
-            self.screen.blit(flag_img, (x, y))
-            text_x = x + 55
-        else:
-            # Fallback to country code
-            country_code = self._get_country_code(current_nation.name)
-            code_text = self.font_large.render(country_code, True, colors.ACCENT)
-            self.screen.blit(code_text, (x, y))
-            text_x = x + 65
-
+        # Nation name
+        nation_x = flag_x + 40
         nation_text = current_nation.name
-        text = self.font_large.render(nation_text, True, colors.TEXT)
-        self.screen.blit(text, (text_x, y))
+        nation_surf = self.font_medium.render(nation_text, True, colors.TEXT)
+        self.screen.blit(nation_surf, (nation_x, y))
 
-        y += 50
+        # 👉 Status text on the SAME line
+        status_x = nation_x + self.font_medium.size(nation_text)[0] + 10
 
-        # Era
-        era_text = f"Era: {current_nation.era.name}"
-        text = self.font_medium.render(era_text, True, colors.ACCENT)
-        self.screen.blit(text, (x, y))
-
-        y += 40
-
-        # Status - show what's happening
         if self.turn_executor.status.is_busy():
             status_text = self.turn_executor.status.get_action()
             if status_text:
-                # Wrap long text
-                max_width = self.panel_current.rect.width - 20
-                words = status_text.split()
-                lines = []
-                current_line = []
+                status_display = f"- {status_text}"
 
-                for word in words:
-                    test_line = ' '.join(current_line + [word])
-                    test_surface = self.font_small.render(test_line, True, colors.WARNING)
-                    if test_surface.get_width() <= max_width:
-                        current_line.append(word)
-                    else:
-                        if current_line:
-                            lines.append(' '.join(current_line))
-                        current_line = [word]
+                max_width = (
+                    self.panel_current.rect.width
+                    - (status_x - self.panel_current.rect.x)
+                    - 10
+                )
 
-                if current_line:
-                    lines.append(' '.join(current_line))
+                while self.font_small.size(status_display)[0] > max_width and len(status_display) > 10:
+                    status_display = status_display[:-4] + "..."
 
-                for line in lines[:3]:  # Max 3 lines
-                    text = self.font_small.render(line, True, colors.WARNING)
-                    self.screen.blit(text, (x, y))
-                    y += 25
+                status_surf = self.font_small.render(status_display, True, colors.WARNING)
+                self.screen.blit(status_surf, (status_x, y + 4))
 
-        # Show error if any
+        # Era on second line
+        y += 35
+        era_text = f"Era: {current_nation.era.name}"
+        era_surf = self.font_small.render(era_text, True, colors.ACCENT)
+        self.screen.blit(era_surf, (x, y))
+
+        # Error (below)
         error = self.turn_executor.status.get_error()
         if error:
-            text = self.font_small.render(f"Error: {error[:50]}", True, colors.ERROR)
-            self.screen.blit(text, (x, y))
+            y += 25
+            error_surf = self.font_small.render(f"Error: {error[:50]}", True, colors.ERROR)
+            self.screen.blit(error_surf, (x, y))
 
-    def _draw_resources(self) -> None:
-        """Draw global resource summary."""
-        x = self.panel_resources.rect.x + 10
-        y = self.panel_resources.rect.y + 50
 
-        text = self.font_small.render("Global Resources Summary:", True, colors.TEXT)
-        self.screen.blit(text, (x, y))
-
-        y += 30
-
+    def _draw_global_resources_bar(self) -> None:
+        """Draw global resources next to buttons at bottom of screen."""
         # Calculate totals
         totals = {rt: 0 for rt in ResourceType}
         for nation in self.controller.game_state.nations:
             for rt in ResourceType:
                 totals[rt] += nation.inventory.get(rt)
 
-        for rt, total in totals.items():
-            if total > 0:
-                resource_text = f"{self._get_resource_emoji(rt)} {total}"
-                color = self._get_resource_color(rt)
-                text = self.font_small.render(resource_text, True, color)
-                self.screen.blit(text, (x, y))
-                y += 25
+        # Start position after buttons
+        button_spacing = 20
+        button_width = 150
+        x = button_spacing * 3 + button_width * 2 + 40
+        y = self.height - 60
+
+        # Draw each resource with emoji + number
+        for rt in ResourceType:
+            total = totals[rt]
+            emoji = self._get_resource_emoji(rt)
+            resource_text = f"{emoji}{total}"
+            text = self.font_small.render(resource_text, True, colors.TEXT)
+            self.screen.blit(text, (x, y + 15))
+            x += 100  # Fixed spacing between resources
+
+    def _draw_inline_logs(self) -> None:
+        """Draw game logs inline in the panel with scrolling."""
+        logs = self.controller.game_state.game_log.get_recent(50)
+        logs.reverse()  # Newest first
+
+        x = self.panel_logs.rect.x + 10
+        line_height = 25
+
+        # Create clipping area
+        clip_rect = pygame.Rect(
+            self.panel_logs.rect.x + 5,
+            self.panel_logs.rect.y + 45,
+            self.panel_logs.rect.width - 10,
+            self.panel_logs.rect.height - 50
+        )
+        self.screen.set_clip(clip_rect)
+
+        # Start y position with scroll offset
+        y = self.panel_logs.rect.y + 50 - self.logs_scroll_offset
+
+        for log in logs:
+            # Skip if above visible area
+            if y + line_height < clip_rect.top:
+                y += line_height
+                continue
+
+            # Stop if below visible area
+            if y > clip_rect.bottom:
+                break
+
+            # Turn number
+            turn_text = f"T{log.turn_number}"
+            text_surf = self.font_small.render(turn_text, True, colors.WARNING)
+            self.screen.blit(text_surf, (x, y))
+
+            # Flags
+            flag_x = x + 45
+            if log.nations_involved and self.flag_images:
+                for nation_id in log.nations_involved[:2]:
+                    nation = self.controller.game_state.get_nation(nation_id)
+                    if nation and nation.name in self.flag_images:
+                        flag_img = self.flag_images[nation.name]['small']
+                        self.screen.blit(flag_img, (flag_x, y + 2))
+                        flag_x += 28
+
+            # Summary (truncated to fit)
+            import re
+            summary_clean = re.sub(r'[\U0001F1E6-\U0001F1FF]{2}', '', log.summary)
+            max_summary_width = self.panel_logs.rect.width - (flag_x - x) - 20
+
+            # Truncate summary to fit
+            summary_text = summary_clean
+            while self.font_small.size(summary_text)[0] > max_summary_width and len(summary_text) > 10:
+                summary_text = summary_text[:-4] + "..."
+
+            text_surf = self.font_small.render(summary_text, True, colors.TEXT)
+            self.screen.blit(text_surf, (flag_x + 5, y))
+
+            y += line_height
+
+        self.screen.set_clip(None)
 
     def _get_resource_color(self, resource_type: ResourceType) -> tuple:
         """Get color for a resource type."""
@@ -518,29 +551,6 @@ class MainWindow:
                 emoji_parts.append(emoji * count)
 
         return " ".join(emoji_parts)
-
-    def _get_country_code(self, country_name: str) -> str:
-        """Get 2-letter country code from country name."""
-        # Map common countries to their codes
-        country_codes = {
-            "United States": "US",
-            "China": "CN",
-            "Japan": "JP",
-            "Germany": "DE",
-            "United Kingdom": "GB",
-            "France": "FR",
-            "India": "IN",
-            "Brazil": "BR",
-            "Canada": "CA",
-            "South Korea": "KR",
-            "Australia": "AU",
-            "Spain": "ES",
-            "Mexico": "MX",
-            "Italy": "IT",
-            "Russia": "RU",
-        }
-
-        return country_codes.get(country_name, country_name[:2].upper())
 
     def run(self) -> None:
         """Main game loop."""

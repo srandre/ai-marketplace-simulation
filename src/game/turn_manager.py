@@ -22,14 +22,6 @@ class TurnManager:
         if not nation:
             return
 
-        # Log turn start
-        self.game_state.game_log.add_entry(
-            log_type=LogType.TURN_START,
-            turn_number=self.game_state.turn_number,
-            summary=f"{nation.name} begins their turn",
-            nations_involved=[nation_id],
-        )
-
         # 1. Generate resources
         self._generate_resources(nation)
 
