@@ -506,9 +506,9 @@ class MainWindow:
 
             # Draw flag image
             flag_img = self.flag_images[nation.name]['medium']
-            self.screen.blit(flag_img, (x, y + 2))
-            text_x = x + 40
-            
+            self.screen.blit(flag_img, (x, y - 1))  # Slightly higher to center with text
+            text_x = x + 45  # More space between flag and text
+
             header = f"{nation.name} - Era {nation.era.value}"
             text = self.font_small.render(header, True, colors.TEXT)
             self.screen.blit(text, (text_x, y + 3))
@@ -522,8 +522,13 @@ class MainWindow:
                 self.screen.blit(text, (x + 20, y))
 
             # Resources (show all with emojis, with spacing for large numbers)
-            y += 20
-            res_x = x + 100
+            y += 24  # Slightly more spacing between lines
+            # Draw "Inv:" label
+            inv_label = "Inv:"
+            text = self.font_small.render(inv_label, True, colors.TEXT_SECONDARY)
+            self.screen.blit(text, (x + 20, y))
+
+            res_x = x + 60  # Align first resource icon with first generator icon
             for rt in ResourceType:
                 emoji = get_resource_emoji(rt)
                 amount = nation.inventory.get(rt)
@@ -553,9 +558,9 @@ class MainWindow:
 
         # Nation flag
         turn_width = self.font_medium.size(turn_text)[0]
-        flag_x = x + turn_width + 15
+        flag_x = x + turn_width + 20  # More space between text and flag
         flag_img = self.flag_images[current_nation.name]['medium']
-        self.screen.blit(flag_img, (flag_x, y + 2))
+        self.screen.blit(flag_img, (flag_x, y - 2))  # Slightly higher to center with text
 
         # Nation name
         nation_x = flag_x + 40
@@ -798,13 +803,13 @@ class MainWindow:
             self.screen.blit(text_surf, (x, y))
 
             # Flags
-            flag_x = x + 45
+            flag_x = x + 55  # More space between turn number and flag
             if log.nations_involved and self.flag_images:
                 for nation_id in log.nations_involved[:2]:
                     nation = self.controller.game_state.get_nation(nation_id)
                     if nation and nation.name in self.flag_images:
                         flag_img = self.flag_images[nation.name]['small']
-                        self.screen.blit(flag_img, (flag_x, y + 2))
+                        self.screen.blit(flag_img, (flag_x, y - 1))  # Slightly higher to center with text
                         flag_x += 28
 
             # Summary (truncated to fit)

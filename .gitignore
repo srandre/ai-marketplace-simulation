@@ -25,3 +25,6 @@ Thumbs.db
 # Game data
 saves/
 *.log
+
+# Config (local settings)
+config/game_config.yaml

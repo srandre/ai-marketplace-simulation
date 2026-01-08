@@ -47,7 +47,6 @@ class GameController:
         generator_costs = {}
         for gen_type in GeneratorType:
             count = self.game_state.get_generator_count(gen_type)
-            print(f'{gen_type}: {count}')
             blueprint = self.game_state.generator_manager.get_blueprint(gen_type)
             if blueprint:
                 cost = blueprint.get_current_cost(count)
@@ -63,8 +62,6 @@ class GameController:
                     }
                     cost_info["cost_either"] = cost_either
                 generator_costs[gen_type.value] = cost_info
-
-        print(generator_costs)
 
         return {
             "nations": nations_summary,
@@ -284,6 +281,32 @@ class GameController:
                     "failure_reason": str(e),
                 },
             )
+
+    def _can_afford_any_generator(self, nation) -> bool:
+        """Check if a nation can afford to build ANY generator."""
+        for gen_type in GeneratorType:
+            blueprint = self.game_state.generator_manager.get_blueprint(gen_type)
+            if not blueprint:
+                continue
+
+            # Check era requirement
+            if blueprint.required_era > nation.era.value:
+                continue
+
+            count_built = self.game_state.get_generator_count(gen_type)
+
+            # Check if can pay with either resource (Farm case)
+            if blueprint.base_cost_either:
+                resource_type = blueprint.can_pay_with_either(nation.inventory, count_built)
+                if resource_type:
+                    return True
+            else:
+                # Check normal cost
+                current_cost = blueprint.get_current_cost(count_built)
+                if nation.inventory.has_multiple(current_cost):
+                    return True
+
+        return False
 
     def _request_alternative_trade(self, nation, rejected_action: Dict):
         """

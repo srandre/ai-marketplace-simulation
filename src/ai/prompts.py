@@ -50,17 +50,26 @@ GENERATORS (base costs):
 
 Generator prices increase exponentially depending on how many of that type exist globally:
 Current cost = base cost × 2^n (where n = number of that generator type already built by any nation)
+e.g. if there are 4 MINES in the game, the cost to build a 5th one would be 80 Wood + 80 Stone
 
-TURN ACTIONS:
-You can do 0 to 2 actions per turn:
-1. TRADE: Propose a trade to another nation
-2. BUILD: Construct a generator
+TURN STRUCTURE (Two Phases):
+Each turn has two distinct phases:
 
-TRADING RULES (IMPORTANT):
+PHASE 1 - TRADING PHASE (up to 2 trades):
+- You can propose up to 2 trades total this phase
+- After each trade proposal, if rejected, you get ONE retry with a different (or same) nation
+- You can skip trading entirely or stop after the first trade
+- Strategic example: Sell resources for gold, then buy different resources with that gold
+
+PHASE 2 - BUILD PHASE (1 build):
+- After trading completes, you can build ONE generator (or skip)
+- If you cannot afford ANY generator, your turn is automatically skipped
+
+TRADING RULES (CRITICAL):
 - ALL trades must be gold-for-resources exchanges
 - One side offers ONLY GOLD (no other resources)
 - The other side offers one or more resources (but NO GOLD)
-- You can't offer a trade if the other part doesn't have the resources or gold for it.
+- Before proposing, verify the target nation HAS the resources you want
 - Examples:
   ✓ VALID: Offer [100 GOLD] for [50 WOOD, 30 STONE]
   ✓ VALID: Offer [50 WOOD, 30 STONE] for [100 GOLD]
@@ -77,11 +86,162 @@ DIPLOMACY:
 STRATEGY:
 - Focus on advancing to the next era
 - Build generators to increase resource production
-- Trade strategically to get resources you need
+- Use the trading phase strategically (sell then buy, or buy resources for building)
 - Balance short-term needs with long-term goals
 - Consider which nations have resources you need
 
 You must respond with valid JSON only. No explanations outside the JSON structure."""
+
+
+def create_trading_phase_prompt(
+    nation: Nation,
+    game_state: Dict[str, Any],
+    era_requirements: Dict[str, int],
+    trades_completed: int = 0,
+) -> str:
+    """Create prompt for the trading phase (up to 2 trades)."""
+
+    # Build concise game state summary
+    other_nations = []
+    for other in game_state.get("nations", []):
+        if other["id"] != nation.id:
+            relationship = nation.get_relationship(other["id"])
+            other_nations.append({
+                "id": other["id"],
+                "name": other["name"],
+                "era": other["era"],
+                "resources": other["resources"],
+                "relationship": relationship,
+            })
+
+    # Recent transactions
+    recent_trades = game_state.get("recent_transactions", [])[:5]
+
+    prompt_data = {
+        "your_nation": {
+            "name": nation.name,
+            "era": nation.era.value,
+            "resources": nation.inventory.to_dict(),
+            "generators": [
+                {"type": g.generator_type.value, "produces": g.produces.value}
+                for g in nation.generators
+            ],
+        },
+        "goal": {
+            "next_era_requirements": era_requirements,
+            "current_era": nation.era.value,
+        },
+        "other_nations": other_nations,
+        "recent_trades": recent_trades,
+        "generator_costs": game_state.get("generator_costs", {}),
+    }
+
+    trades_remaining = 2 - trades_completed
+
+    if trades_completed == 0:
+        phase_text = "TRADING PHASE - First Trade Opportunity (2 trades remaining)"
+        instruction = "You can propose ONE trade to another nation, or skip. If accepted, you'll get another trade opportunity."
+        strategy_note = "You can strategize: for example, sell resources you have for gold, then buy different resources with that gold."
+    else:
+        phase_text = "TRADING PHASE - Second Trade Opportunity (1 trade remaining)"
+        instruction = "You completed one trade. You can propose ONE final trade to any nation (same or different), or skip."
+        strategy_note = "This is your last trade opportunity this turn. Use it wisely!"
+
+    prompt = f"""
+{phase_text}
+
+GAME STATE:
+{json.dumps(prompt_data, indent=2)}
+
+{instruction}
+
+TRADING RULES (CRITICAL):
+- One side offers ONLY GOLD (nothing else)
+- The other side offers resources (NO GOLD at all)
+- Before proposing, verify the target nation HAS the resources you want
+- Examples:
+  ✓ You offer 100 GOLD, request 50 WOOD + 30 STONE
+  ✓ You offer 50 WOOD + 30 STONE, request 100 GOLD
+  ✗ You offer 100 GOLD + 10 WOOD (mixing gold with resources)
+  ✗ Both sides have resources but no gold
+
+STRATEGY:
+- Check what resources you need for era advancement
+- Consider which nations have those resources
+- Think about fair pricing (resources are valuable)
+- Remember your relationships with other nations
+- {strategy_note}
+
+Respond with JSON:
+{{
+    "trade": true/false,
+    "target_nation_id": <nation_id or null>,
+    "offering": {{"GOLD": 100}} or {{"WOOD": 50, "STONE": 30}},
+    "requesting": {{"WOOD": 50, "STONE": 30}} or {{"GOLD": 100}},
+    "reasoning": "brief explanation (max 150 chars)"
+}}
+
+If you don't want to trade, set trade: false and leave other fields null/empty.
+If you want to trade, set trade: true and fill in all fields."""
+
+    return prompt
+
+
+def create_build_phase_prompt(
+    nation: Nation,
+    game_state: Dict[str, Any],
+    era_requirements: Dict[str, int],
+) -> str:
+    """Create prompt for the build phase (build one generator or skip)."""
+
+    prompt_data = {
+        "your_nation": {
+            "name": nation.name,
+            "era": nation.era.value,
+            "resources": nation.inventory.to_dict(),
+            "generators": [
+                {"type": g.generator_type.value, "produces": g.produces.value}
+                for g in nation.generators
+            ],
+        },
+        "goal": {
+            "next_era_requirements": era_requirements,
+            "current_era": nation.era.value,
+        },
+        "generator_costs": game_state.get("generator_costs", {}),
+    }
+
+    prompt = f"""
+BUILD PHASE
+
+GAME STATE:
+{json.dumps(prompt_data, indent=2)}
+
+You can now build ONE generator, or skip building.
+
+BUILDING RULES:
+- Check generator_costs for exact prices
+- Prices increase exponentially: base_cost × 2^n (n = already built globally)
+- For FARM: You MUST specify payment_resource (WOOD or STONE)
+- Only build if you have enough resources
+
+STRATEGY:
+- Which generator helps you reach the next era?
+- Do you have enough resources for it?
+- Will this generator produce resources you need?
+
+Respond with JSON:
+{{
+    "build": true/false,
+    "generator_type": "MINE" or null,
+    "payment_resource": "WOOD" or "STONE" or null (only for FARM),
+    "reasoning": "brief explanation (max 150 chars)"
+}}
+
+If you don't want to build (or can't afford anything), set build: false.
+If you want to build, set build: true and specify the generator_type."""
+
+    return prompt
 
 
 def create_combined_turn_decision_prompt(

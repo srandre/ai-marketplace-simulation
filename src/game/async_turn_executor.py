@@ -93,7 +93,7 @@ class AsyncTurnExecutor:
                 pass
 
     def _execute_turn_with_status(self):
-        """Execute a turn with status updates."""
+        """Execute a turn with two-phase system: Trading Phase (up to 2 trades) -> Build Phase (1 build)."""
         try:
             self.status.set_processing(True)
             self.status.set_error(None)
@@ -106,91 +106,165 @@ class AsyncTurnExecutor:
             self.status.set_action(f"{current_nation.name} begins their turn")
             self.controller.turn_manager.start_turn(current_nation.id)
 
-            # AI decision making
-            self.status.set_action(f"{current_nation.name} is planning their turn strategy...")
             era_reqs = self.controller.game_state.get_era_advancement_requirements(current_nation.era)
             era_reqs_dict = {k.value: v for k, v in era_reqs.items()} if era_reqs else {}
-            game_state_summary = self.controller._build_game_state_summary()
 
-            decision, prompt, response = self.controller.decision_maker.decide_all_actions(
-                current_nation, game_state_summary, era_reqs_dict
-            )
-
-            # Log the AI decision with trade details if present
             from ..models.enums import LogType
-            actions = decision.get("actions", [])
 
-            # Extract trade actions for logging
-            trade_actions = [a for a in actions if a.get("type") == "TRADE"]
-            nations_involved = [current_nation.id]
-            log_details = {"decision": decision}
+            # ===== TRADING PHASE =====
+            trades_completed = 0
+            trade_summaries = []
 
-            # Add trade offers to details and involved nations
-            if trade_actions:
-                log_details["trade_offers"] = []
-                for trade_action in trade_actions:
-                    target_id = trade_action.get("target_nation_id")
-                    if target_id is not None and target_id not in nations_involved:
-                        nations_involved.append(target_id)
-                    log_details["trade_offers"].append({
-                        "target_nation_id": target_id,
-                        "offering": trade_action.get("offering", {}),
-                        "requesting": trade_action.get("requesting", {})
-                    })
+            for trade_attempt in range(2):  # Up to 2 trades
+                game_state_summary = self.controller._build_game_state_summary()
 
-            # Create summary based on actions taken
-            action_summaries = []
-            for action in actions:
-                action_type = action.get("type")
-                if action_type == "TRADE":
-                    target_id = action.get("target_nation_id")
-                    if target_id is not None:
-                        target_nation = self.controller.game_state.get_nation(target_id)
-                        if target_nation:
-                            action_summaries.append(f"trade with {target_nation.name}")
+                self.status.set_action(f"{current_nation.name} is considering trading...")
+                decision, prompt, response = self.controller.decision_maker.decide_trading_phase(
+                    current_nation, game_state_summary, era_reqs_dict, trades_completed
+                )
+
+                # Log the trading phase decision
+                log_details = {"phase": "trading", "attempt": trade_attempt + 1, "decision": decision}
+                summary_parts = []
+
+                if decision.get("trade"):
+                    target_id = decision.get("target_nation_id")
+                    target_nation = self.controller.game_state.get_nation(target_id) if target_id is not None else None
+
+                    if target_nation:
+                        summary_parts.append(f"proposes trade with {target_nation.name}")
+                        self.status.set_action(f"{current_nation.name} is proposing a trade to {target_nation.name}...")
+
+                        # Execute the trade
+                        trade_action = {
+                            "type": "TRADE",
+                            "target_nation_id": target_id,
+                            "offering": decision.get("offering", {}),
+                            "requesting": decision.get("requesting", {}),
+                            "reasoning": decision.get("reasoning", "")
+                        }
+
+                        result = self.controller._execute_trade_action(current_nation, trade_action)
+
+                        if result == "ACCEPTED":
+                            trades_completed += 1
+                            trade_summaries.append(f"traded with {target_nation.name}")
+                        elif result == "REJECTED":
+                            trade_summaries.append(f"trade rejected by {target_nation.name}")
+
+                            # Allow one retry with a different (or same) partner
+                            self.status.set_action(f"{current_nation.name} seeking alternative trade partner...")
+                            retry_trade = self.controller._request_alternative_trade(current_nation, trade_action)
+
+                            if retry_trade:
+                                retry_target_id = retry_trade.get("target_nation_id")
+                                retry_target = self.controller.game_state.get_nation(retry_target_id) if retry_target_id is not None else None
+
+                                if retry_target:
+                                    self.status.set_action(f"{current_nation.name} proposing alternative trade to {retry_target.name}...")
+                                    retry_result = self.controller._execute_trade_action(current_nation, retry_trade)
+
+                                    if retry_result == "ACCEPTED":
+                                        trades_completed += 1
+                                        trade_summaries.append(f"then traded with {retry_target.name}")
+                                    elif retry_result == "REJECTED":
+                                        trade_summaries.append(f"retry rejected by {retry_target.name}")
+                                    else:
+                                        trade_summaries.append(f"retry {retry_result.lower()}")
                         else:
-                            action_summaries.append("trade")
-                elif action_type == "BUILD":
-                    gen_type = action.get("generator_type", "generator")
-                    action_summaries.append(f"build {gen_type}")
-                elif action_type == "PASS":
-                    action_summaries.append("pass")
+                            trade_summaries.append(f"trade {result.lower()}")
+                    else:
+                        summary_parts.append("invalid trade target")
+                else:
+                    summary_parts.append("skips trading")
+                    # Break out of trading loop if they chose not to trade
+                    if trade_attempt == 0 or not decision.get("trade"):
+                        summary = f"{current_nation.name}: {', '.join(summary_parts)}"
+                        log_entry = self.controller.game_state.game_log.add_entry(
+                            log_type=LogType.AI_DECISION,
+                            turn_number=self.controller.game_state.turn_number,
+                            round_number=self.controller.game_state.round_number,
+                            summary=summary,
+                            nations_involved=[current_nation.id],
+                            details=log_details,
+                        )
+                        log_entry.add_ai_decision(current_nation.id, prompt, response)
+                        break
 
-            if action_summaries:
-                summary = f"{current_nation.name}: {', '.join(action_summaries)}"
+                # Log this trading attempt
+                if summary_parts:
+                    summary = f"{current_nation.name}: {', '.join(summary_parts)}"
+                    log_entry = self.controller.game_state.game_log.add_entry(
+                        log_type=LogType.AI_DECISION,
+                        turn_number=self.controller.game_state.turn_number,
+                        round_number=self.controller.game_state.round_number,
+                        summary=summary,
+                        nations_involved=[current_nation.id, target_id] if target_id else [current_nation.id],
+                        details=log_details,
+                    )
+                    log_entry.add_ai_decision(current_nation.id, prompt, response)
+
+            # ===== BUILD PHASE =====
+            # Check if nation can afford ANY generator
+            can_afford_anything = self.controller._can_afford_any_generator(current_nation)
+
+            if not can_afford_anything:
+                # Mandatory turn skip - nation cannot afford any generator
+                summary = f"{current_nation.name}: turn skipped (cannot afford any generators)"
+                self.controller.game_state.game_log.add_entry(
+                    log_type=LogType.ACTION,
+                    turn_number=self.controller.game_state.turn_number,
+                    round_number=self.controller.game_state.round_number,
+                    summary=summary,
+                    nations_involved=[current_nation.id],
+                    details={"phase": "build", "reason": "insufficient_resources"}
+                )
+                self.status.set_action(f"{current_nation.name} cannot afford any generators")
             else:
-                summary = f"{current_nation.name}: no actions"
+                # Nation can afford something, let them decide
+                game_state_summary = self.controller._build_game_state_summary()
 
-            log_entry = self.controller.game_state.game_log.add_entry(
-                log_type=LogType.AI_DECISION,
-                turn_number=self.controller.game_state.turn_number,
-                round_number=self.controller.game_state.round_number,
-                summary=summary,
-                nations_involved=nations_involved,
-                details=log_details,
-            )
-            log_entry.add_ai_decision(current_nation.id, prompt, response)
+                self.status.set_action(f"{current_nation.name} is considering building...")
+                decision, prompt, response = self.controller.decision_maker.decide_build_phase(
+                    current_nation, game_state_summary, era_reqs_dict
+                )
 
-            # Execute TRADE actions first (allow retry if rejected)
-            trade_actions = [a for a in actions if a.get("type") == "TRADE"]
-            if trade_actions:
-                first_trade = trade_actions[0]
-                self.status.set_action(f"{current_nation.name} is proposing a trade...")
-                trade_result = self.controller._execute_trade_action(current_nation, first_trade)
+                if decision.get("build"):
+                    gen_type = decision.get("generator_type")
 
-                # If trade was rejected, allow one retry with a different partner
-                if trade_result == "REJECTED":
-                    self.status.set_action(f"{current_nation.name} attempting alternative trade...")
-                    # Ask AI for alternative trade partner
-                    retry_trade = self.controller._request_alternative_trade(current_nation, first_trade)
-                    if retry_trade:
-                        self.controller._execute_trade_action(current_nation, retry_trade)
+                    # First, log the AI's decision to build
+                    summary = f"{current_nation.name}: attempting to build {gen_type}"
+                    log_entry = self.controller.game_state.game_log.add_entry(
+                        log_type=LogType.AI_DECISION,
+                        turn_number=self.controller.game_state.turn_number,
+                        round_number=self.controller.game_state.round_number,
+                        summary=summary,
+                        nations_involved=[current_nation.id],
+                        details={"phase": "build", "decision": decision},
+                    )
+                    log_entry.add_ai_decision(current_nation.id, prompt, response)
 
-            # Then execute BUILD actions
-            for action in actions:
-                if action.get("type") == "BUILD":
-                    self.status.set_action(f"{current_nation.name} is constructing a generator...")
-                    self.controller._execute_build_from_plan(current_nation, action)
+                    self.status.set_action(f"{current_nation.name} is constructing {gen_type}...")
+
+                    # Then execute the build - the build manager will log success or failure
+                    build_action = {
+                        "generator_type": gen_type,
+                        "payment_resource": decision.get("payment_resource"),
+                        "reasoning": decision.get("reasoning", "")
+                    }
+                    self.controller._execute_build_from_plan(current_nation, build_action)
+                else:
+                    # Log if they explicitly skip building
+                    summary = f"{current_nation.name}: skips building"
+                    log_entry = self.controller.game_state.game_log.add_entry(
+                        log_type=LogType.AI_DECISION,
+                        turn_number=self.controller.game_state.turn_number,
+                        round_number=self.controller.game_state.round_number,
+                        summary=summary,
+                        nations_involved=[current_nation.id],
+                        details={"phase": "build", "decision": decision},
+                    )
+                    log_entry.add_ai_decision(current_nation.id, prompt, response)
 
             # End turn
             self.controller.turn_manager.end_turn()
