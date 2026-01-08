@@ -92,49 +92,35 @@ class MainWindow:
         return None
 
     def _load_flag_images(self) -> dict:
-        """Load flag images from assets/flags directory."""
+        """Load flag images from assets/flags directory based on nations in game."""
         from pathlib import Path
 
         flags = {}
         project_root = Path(__file__).parent.parent.parent
         flags_dir = project_root / "assets" / "flags"
 
-        # Map country names to flag filenames
-        flag_files = {
-            "United States": "us.png",
-            "China": "cn.png",
-            "Japan": "jp.png",
-            "Germany": "de.png",
-            "United Kingdom": "gb.png",
-            "France": "fr.png",
-            "India": "in.png",
-            "Brazil": "br.png",
-            "Canada": "ca.png",
-            "South Korea": "kr.png",
-            "Australia": "au.png",
-            "Spain": "es.png",
-            "Mexico": "mx.png",
-            "Italy": "it.png",
-            "Russia": "ru.png",
-        }
+        # Load flags for all nations in the game
+        for nation in self.controller.game_state.nations:
+            flag_filename = f"{nation.code}.png"
+            flag_path = flags_dir / flag_filename
 
-        for country, filename in flag_files.items():
-            flag_path = flags_dir / filename
             if flag_path.exists():
                 try:
                     # Load and scale flag image
                     flag_img = pygame.image.load(str(flag_path))
-                    # Scale to 32x24 for medium size, 48x36 for large
+                    # Scale to different sizes
                     flag_small = pygame.transform.scale(flag_img, (24, 18))
                     flag_medium = pygame.transform.scale(flag_img, (32, 24))
                     flag_large = pygame.transform.scale(flag_img, (48, 36))
-                    flags[country] = {
+                    flags[nation.name] = {
                         'small': flag_small,
                         'medium': flag_medium,
                         'large': flag_large
                     }
                 except Exception as e:
-                    print(f"Error loading flag for {country}: {e}")
+                    print(f"Error loading flag for {nation.name} ({nation.code}): {e}")
+            else:
+                print(f"Flag image not found: {flag_path}")
 
         return flags
 
@@ -209,8 +195,18 @@ class MainWindow:
         """Execute next turn."""
         if not self.is_processing:
             self.is_processing = True
-            self.controller.execute_turn()
-            self.is_processing = False
+            print(f"\n{'='*60}")
+            print(f"Executing Turn {self.controller.game_state.turn_number}")
+            print(f"{'='*60}")
+            try:
+                self.controller.execute_turn()
+            except Exception as e:
+                print(f"ERROR during turn execution: {e}")
+                import traceback
+                traceback.print_exc()
+            finally:
+                self.is_processing = False
+                print(f"Turn {self.controller.game_state.turn_number} complete\n")
 
     def _toggle_log_viewer(self) -> None:
         """Toggle log viewer window."""
@@ -285,7 +281,7 @@ class MainWindow:
 
         # Draw log viewer if open
         if self.log_viewer_open:
-            self.log_viewer.draw(self.screen, self.font_small, self.controller.game_state)
+            self.log_viewer.draw(self.screen, self.font_small, self.controller.game_state, self.flag_images)
 
         pygame.display.flip()
 
@@ -299,11 +295,25 @@ class MainWindow:
             self.panel_nations.rect.height - 45
         )
 
+        # Reorder nations: current nation at top, then in turn order
+        turn_order = self.controller.game_state.turn_order
+        current_idx = self.controller.game_state.current_nation_index
+
+        # Set clipping area to prevent overflow
+        self.screen.set_clip(clip_rect)
+
+        # Reorder turn_order to put current nation first
+        ordered_nation_ids = turn_order[current_idx:] + turn_order[:current_idx]
+
+        # Convert to actual nation objects
+        ordered_nations = [self.controller.game_state.get_nation(nid) for nid in ordered_nation_ids]
+        ordered_nations = [n for n in ordered_nations if n is not None]  # Filter out None
+
         # Draw nations with scroll offset
         y_offset = 50 - self.nations_scroll_offset
         item_height = 90
 
-        for nation in self.controller.game_state.nations:
+        for nation in ordered_nations:
             x = self.panel_nations.rect.x + 10
             y = self.panel_nations.rect.y + y_offset
 
@@ -336,18 +346,21 @@ class MainWindow:
                 text = self.font_small.render(gen_text, True, colors.TEXT_SECONDARY)
                 self.screen.blit(text, (x + 20, y))
 
-            # Resources (compact)
+            # Resources (show all with emojis, with spacing for large numbers)
             y += 20
-            resources_str = ", ".join(
-                f"{rt.value}: {nation.inventory.get(rt)}"
-                for rt in ResourceType
-                if nation.inventory.get(rt) > 0
-            )
-            if resources_str:
-                text = self.font_small.render(resources_str, True, colors.TEXT_SECONDARY)
-                self.screen.blit(text, (x + 20, y))
+            res_x = x + 100
+            for rt in ResourceType:
+                emoji = self._get_resource_emoji(rt)
+                amount = nation.inventory.get(rt)
+                res_text = f"{emoji}{amount}"
+                text = self.font_small.render(res_text, True, colors.TEXT_SECONDARY)
+                self.screen.blit(text, (res_x, y))
+                res_x += 100  # Fixed spacing between resources (accommodates up to 6 digits)
 
             y_offset += item_height
+
+        # Reset clipping
+        self.screen.set_clip(None)
 
     def _draw_current_turn(self) -> None:
         """Draw current turn info."""
@@ -414,7 +427,7 @@ class MainWindow:
 
         for rt, total in totals.items():
             if total > 0:
-                resource_text = f"{rt.value}: {total}"
+                resource_text = f"{self._get_resource_emoji(rt)} {total}"
                 color = self._get_resource_color(rt)
                 text = self.font_small.render(resource_text, True, color)
                 self.screen.blit(text, (x, y))
@@ -431,6 +444,18 @@ class MainWindow:
             ResourceType.INFORMATION: colors.INFORMATION_COLOR,
         }
         return color_map.get(resource_type, colors.TEXT)
+
+    def _get_resource_emoji(self, resource_type: ResourceType) -> str:
+        """Get emoji for a resource type."""
+        emoji_map = {
+            ResourceType.GOLD: "💰",
+            ResourceType.WOOD: "🪵",
+            ResourceType.STONE: "🪨",
+            ResourceType.FOOD: "🌾",
+            ResourceType.TECHNOLOGY: "⚙️",
+            ResourceType.INFORMATION: "💾",
+        }
+        return emoji_map.get(resource_type, "❓")
 
     def _get_generator_emojis(self, nation) -> str:
         """Get emoji representation of generators grouped by type."""

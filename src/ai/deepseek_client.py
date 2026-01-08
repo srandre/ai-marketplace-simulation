@@ -97,6 +97,7 @@ class DeepSeekClient:
         }
 
         try:
+            print(f"  Making API call to DeepSeek (timeout: {self.timeout}s)...")
             response = requests.post(
                 self.base_url,
                 headers=headers,
@@ -106,6 +107,7 @@ class DeepSeekClient:
 
             response.raise_for_status()
             data = response.json()
+            print(f"  API call successful!")
 
             # Extract the assistant's message
             if "choices" in data and len(data["choices"]) > 0:
@@ -113,8 +115,15 @@ class DeepSeekClient:
                 parsed = json.loads(content)
                 return parsed, content
 
+            print(f"  No choices in API response, using default action")
             return default_action, json.dumps(default_action)
 
+        except requests.exceptions.Timeout:
+            print(f"  API timeout after {self.timeout}s (falling back to default)")
+            return default_action, json.dumps(default_action)
+        except requests.exceptions.RequestException as e:
+            print(f"  API request error (falling back to default): {e}")
+            return default_action, json.dumps(default_action)
         except Exception as e:
-            print(f"DeepSeek API error (falling back to default): {e}")
+            print(f"  Unexpected error (falling back to default): {e}")
             return default_action, json.dumps(default_action)

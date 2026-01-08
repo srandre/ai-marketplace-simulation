@@ -47,8 +47,9 @@ class LogViewer:
 
         return False
 
-    def draw(self, screen: pygame.Surface, font: pygame.font.Font, game_state: GameState) -> None:
+    def draw(self, screen: pygame.Surface, font: pygame.font.Font, game_state: GameState, flag_images: dict = None) -> None:
         """Draw the log viewer overlay."""
+        self.flag_images = flag_images or {}
         # Semi-transparent background
         overlay = pygame.Surface((screen.get_width(), screen.get_height()))
         overlay.set_alpha(200)
@@ -91,6 +92,13 @@ class LogViewer:
         y = self.rect.y + 50
 
         visible_height = self.rect.height - 60
+
+        # Calculate max scroll and clamp scroll_offset
+        item_height = 40
+        total_content_height = len(logs) * item_height
+        max_scroll = max(0, total_content_height - visible_height)
+        self.scroll_offset = max(0, min(max_scroll, self.scroll_offset))
+
         y_pos = -self.scroll_offset
 
         for i, log in enumerate(logs):
@@ -106,16 +114,28 @@ class LogViewer:
                 text_surf = font.render(turn_text, True, colors.WARNING)
                 screen.blit(text_surf, (x + 5, y + y_pos + 5))
 
-                # Summary
-                summary_text = log.summary[:80] + "..." if len(log.summary) > 80 else log.summary
+                # Draw flags for involved nations
+                flag_x = x + 60
+                if log.nations_involved and self.flag_images:
+                    for nation_id in log.nations_involved[:2]:  # Max 2 flags
+                        nation = game_state.get_nation(nation_id)
+                        if nation and nation.name in self.flag_images:
+                            flag_img = self.flag_images[nation.name]['small']
+                            screen.blit(flag_img, (flag_x, y + y_pos + 8))
+                            flag_x += 30
+
+                # Summary (remove flag emojis from text)
+                import re
+                summary_clean = re.sub(r'[\U0001F1E6-\U0001F1FF]{2}', '', log.summary)  # Remove flag emojis
+                summary_text = summary_clean[:80] + "..." if len(summary_clean) > 80 else summary_clean
                 text_surf = font.render(summary_text, True, colors.TEXT)
-                screen.blit(text_surf, (x + 60, y + y_pos + 5))
+                screen.blit(text_surf, (flag_x + 5, y + y_pos + 5))
 
                 pygame.draw.line(screen, colors.BORDER,
                                (x, y + y_pos + 35),
                                (x + self.rect.width - 20, y + y_pos + 35))
 
-            y_pos += 40
+            y_pos += item_height
 
             if y_pos > visible_height:
                 break

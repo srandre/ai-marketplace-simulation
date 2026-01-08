@@ -31,6 +31,8 @@ class GameController:
         if not current_nation:
             return
 
+        print(f"Current Nation: {current_nation.name} (Era {current_nation.era.value})")
+
         # Start turn (resource generation, era advancement)
         self.turn_manager.start_turn(current_nation.id)
 
@@ -38,12 +40,18 @@ class GameController:
         available_actions = self._get_available_actions()
 
         # Execute AI actions
+        print(f"Phase 1: SELL action")
         self._execute_sell_action(current_nation.id, available_actions)
+
+        print(f"Phase 2: BUY action")
         self._execute_buy_action()
+
+        print(f"Phase 3: BUILD action")
         self._execute_build_action(current_nation.id, available_actions)
 
         # End turn
         self.turn_manager.end_turn()
+        print(f"Turn ended for {current_nation.name}")
 
     def _get_available_actions(self) -> List[str]:
         """Get list of available actions for the nation."""

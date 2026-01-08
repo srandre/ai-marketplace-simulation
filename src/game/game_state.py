@@ -65,7 +65,7 @@ class GameState(BaseModel):
             nation = Nation(
                 id=i,
                 name=nation_data["name"],
-                flag=nation_data["flag"],
+                code=nation_data["code"],
                 era=Era.ORIGIN,
                 inventory=ResourceInventory(),
             )

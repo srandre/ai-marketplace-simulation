@@ -14,7 +14,7 @@ class Nation(BaseModel):
 
     id: int
     name: str
-    flag: str
+    code: str  # ISO country code for flag image (e.g., "us", "cn", "jp")
     era: Era = Field(default=Era.ORIGIN)
     inventory: ResourceInventory = Field(default_factory=ResourceInventory)
     generators: List[Generator] = Field(default_factory=list)
