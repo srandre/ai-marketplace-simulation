@@ -98,6 +98,16 @@ class GameController:
             game_state_summary,
         )
 
+        # Add decision to responder's memory
+        responder.add_decision_to_memory(
+            round_number=self.game_state.round_number,
+            turn_number=self.game_state.turn_number,
+            decision_type="TRADE_RESPONSE",
+            decision=decision,
+            reasoning=decision.get("reasoning", ""),
+            outcome=f"Decided to {decision.get('decision', 'REJECT')} trade from {initiator.name}"
+        )
+
         # Log AI decision with trade offer details
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,

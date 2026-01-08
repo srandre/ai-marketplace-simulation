@@ -94,6 +94,27 @@ STRATEGY:
 You must respond with valid JSON only. No explanations outside the JSON structure."""
 
 
+def _format_memory_context(nation) -> str:
+    """Format nation's decision memory for inclusion in prompts."""
+    memory = nation.get_memory_context(max_entries=20)
+
+    if not memory:
+        return "\n--- YOUR PREVIOUS DECISIONS ---\nNo previous decisions yet. This is your first turn.\n"
+
+    memory_text = "\n--- YOUR PREVIOUS DECISIONS (Your Strategic Memory) ---\n"
+    memory_text += "Review your past decisions to maintain strategic consistency:\n\n"
+
+    for mem in memory:
+        memory_text += f"Round {mem['round']}, Turn {mem['turn']} - {mem['type']}:\n"
+        memory_text += f"  Decision: {mem['decision']}\n"
+        if mem.get('outcome'):
+            memory_text += f"  Outcome: {mem['outcome']}\n"
+        memory_text = "\n--- END PREVIOUS DECISIONS ---\n"
+
+    memory_text += "Use this history to inform your current strategy and maintain consistency.\n"
+    return memory_text
+
+
 def create_trading_phase_prompt(
     nation: Nation,
     game_state: Dict[str, Any],
@@ -148,18 +169,23 @@ def create_trading_phase_prompt(
         instruction = "You completed one trade. You can propose ONE final trade to any nation (same or different), or skip."
         strategy_note = "This is your last trade opportunity this turn. Use it wisely!"
 
+    # Add memory context
+    memory_context = _format_memory_context(nation)
+
     prompt = f"""
 {phase_text}
 
 GAME STATE:
 {json.dumps(prompt_data, indent=2)}
+{memory_context}
 
 {instruction}
 
 TRADING RULES (CRITICAL):
 - One side offers ONLY GOLD (nothing else)
 - The other side offers resources (NO GOLD at all)
-- Before proposing, verify the target nation HAS the resources you want
+- Before proposing a buy offer, verify the target nation HAS the resources you want. Otherwise, it will be invalid and you will waste an opportunity.
+- Before proposing a sell offer, verify the target nation HAS the amount of gold you want. Otherwise, it will be invalid and you will waste an opportunity.
 - Examples:
   ✓ You offer 100 GOLD, request 50 WOOD + 30 STONE
   ✓ You offer 50 WOOD + 30 STONE, request 100 GOLD
@@ -212,11 +238,15 @@ def create_build_phase_prompt(
         "generator_costs": game_state.get("generator_costs", {}),
     }
 
+    # Add memory context
+    memory_context = _format_memory_context(nation)
+
     prompt = f"""
 BUILD PHASE
 
 GAME STATE:
 {json.dumps(prompt_data, indent=2)}
+{memory_context}
 
 You can now build ONE generator, or skip building.
 
@@ -371,10 +401,14 @@ def create_trade_response_prompt(
         "your_goal": game_state.get("era_requirements", {}),
     }
 
+    # Add memory context
+    memory_context = _format_memory_context(nation)
+
     prompt = f"""You received a trade offer. Decide whether to accept, counter, or reject.
 
 TRADE OFFER:
 {json.dumps(prompt_data, indent=2)}
+{memory_context}
 
 The proposer offers: {offer.get('offering', {})}
 The proposer requests: {offer.get('requesting', {})}

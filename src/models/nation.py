@@ -1,12 +1,23 @@
 """Nation model representing a player in the game."""
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
 from .enums import Era, GeneratorType, ResourceType
 from .generator import Generator
 from .resource import ResourceInventory
+
+
+class DecisionMemory(BaseModel):
+    """Stores a single decision made by the AI."""
+
+    round_number: int
+    turn_number: int
+    decision_type: str  # "TRADE", "BUILD", "TRADE_RESPONSE", etc.
+    decision: Dict[str, Any]  # The full decision JSON
+    reasoning: str
+    outcome: str = ""  # What happened after the decision (optional)
 
 
 class Nation(BaseModel):
@@ -19,6 +30,7 @@ class Nation(BaseModel):
     inventory: ResourceInventory = Field(default_factory=ResourceInventory)
     generators: List[Generator] = Field(default_factory=list)
     relationships: Dict[int, int] = Field(default_factory=dict)  # nation_id -> relationship_score
+    memory: List[DecisionMemory] = Field(default_factory=list)  # AI decision history
 
     def add_generator(self, generator: Generator) -> None:
         """Add a generator to the nation."""
@@ -75,6 +87,46 @@ class Nation(BaseModel):
     def get_generator_count(self, generator_type: GeneratorType) -> int:
         """Count how many generators of a specific type this nation has."""
         return sum(1 for g in self.generators if g.generator_type == generator_type)
+
+    def add_decision_to_memory(
+        self,
+        round_number: int,
+        turn_number: int,
+        decision_type: str,
+        decision: Dict[str, Any],
+        reasoning: str,
+        outcome: str = ""
+    ) -> None:
+        """Add a decision to this nation's memory."""
+        memory_entry = DecisionMemory(
+            round_number=round_number,
+            turn_number=turn_number,
+            decision_type=decision_type,
+            decision=decision,
+            reasoning=reasoning,
+            outcome=outcome
+        )
+        self.memory.append(memory_entry)
+
+    def get_memory_context(self, max_entries: int = 20) -> List[Dict[str, Any]]:
+        """
+        Get recent decision history for AI context.
+        Returns the most recent decisions to include in prompts.
+        """
+        # Get the last N decisions
+        recent_memories = self.memory[-max_entries:] if len(self.memory) > max_entries else self.memory
+
+        return [
+            {
+                "round": mem.round_number,
+                "turn": mem.turn_number,
+                "type": mem.decision_type,
+                "decision": mem.decision,
+                "reasoning": mem.reasoning,
+                "outcome": mem.outcome
+            }
+            for mem in recent_memories
+        ]
 
     def to_summary_dict(self) -> Dict:
         """Convert to a summary dictionary for AI context."""

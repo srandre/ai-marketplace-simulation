@@ -135,6 +135,15 @@ class AsyncTurnExecutor:
                         summary_parts.append(f"proposes trade with {target_nation.name}")
                         self.status.set_action(f"{current_nation.name} is proposing a trade to {target_nation.name}...")
 
+                        # Add decision to nation's memory
+                        current_nation.add_decision_to_memory(
+                            round_number=self.controller.game_state.round_number,
+                            turn_number=self.controller.game_state.turn_number,
+                            decision_type="TRADE_PROPOSAL",
+                            decision=decision,
+                            reasoning=decision.get("reasoning", "")
+                        )
+
                         # Log the proposal BEFORE executing the trade
                         summary = f"{current_nation.name}: {', '.join(summary_parts)}"
                         log_entry = self.controller.game_state.game_log.add_entry(
@@ -158,6 +167,10 @@ class AsyncTurnExecutor:
 
                         result = self.controller._execute_trade_action(current_nation, trade_action)
 
+                        # Update memory with outcome
+                        if current_nation.memory:
+                            current_nation.memory[-1].outcome = f"Trade {result.lower()} by {target_nation.name}"
+
                         if result == "ACCEPTED":
                             trades_completed += 1
                             trade_summaries.append(f"traded with {target_nation.name}")
@@ -177,12 +190,13 @@ class AsyncTurnExecutor:
                                     retry_result = self.controller._execute_trade_action(current_nation, retry_trade)
 
                                     if retry_result == "ACCEPTED":
-                                        trades_completed += 1
                                         trade_summaries.append(f"then traded with {retry_target.name}")
                                     elif retry_result == "REJECTED":
                                         trade_summaries.append(f"retry rejected by {retry_target.name}")
                                     else:
                                         trade_summaries.append(f"retry {retry_result.lower()}")
+                                    
+                                    trades_completed += 1
                         else:
                             trade_summaries.append(f"trade {result.lower()}")
                     else:
@@ -229,6 +243,15 @@ class AsyncTurnExecutor:
 
                 if decision.get("build"):
                     gen_type = decision.get("generator_type")
+
+                    # Add decision to nation's memory
+                    current_nation.add_decision_to_memory(
+                        round_number=self.controller.game_state.round_number,
+                        turn_number=self.controller.game_state.turn_number,
+                        decision_type="BUILD",
+                        decision=decision,
+                        reasoning=decision.get("reasoning", "")
+                    )
 
                     # First, log the AI's decision to build
                     summary = f"{current_nation.name}: attempting to build {gen_type}"
