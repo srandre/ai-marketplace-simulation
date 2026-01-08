@@ -103,7 +103,7 @@ class GameController:
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
             round_number=self.game_state.round_number,
-            summary=f"{responder.name} AI responding to trade",
+            summary=f"{responder.name} responding to trade",
             nations_involved=[initiator.id, responder.id],  # Include both nations
             details={
                 "action_type": "TRADE_RESPONSE",
@@ -151,7 +151,7 @@ class GameController:
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
             round_number=self.game_state.round_number,
-            summary=f"{initiator.name} AI responding to counter-offer",
+            summary=f"{initiator.name} responding to counter-offer",
             nations_involved=[initiator.id],
             details={"action_type": "COUNTER_RESPONSE"},
         )
@@ -362,6 +362,11 @@ class GameController:
 
         # Check if AI wants to retry with a different partner
         if decision.get("retry") and decision.get("target_nation_id") is not None:
+            # Validate that the AI didn't select the same nation that rejected the trade
+            if decision["target_nation_id"] == rejected_target_id:
+                print(f"[WARNING] AI selected the same nation ({rejected_target_id}) that rejected the trade. Ignoring retry.")
+                return None
+
             return {
                 "type": "TRADE",
                 "target_nation_id": decision["target_nation_id"],

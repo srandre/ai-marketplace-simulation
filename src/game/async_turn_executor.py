@@ -135,6 +135,18 @@ class AsyncTurnExecutor:
                         summary_parts.append(f"proposes trade with {target_nation.name}")
                         self.status.set_action(f"{current_nation.name} is proposing a trade to {target_nation.name}...")
 
+                        # Log the proposal BEFORE executing the trade
+                        summary = f"{current_nation.name}: {', '.join(summary_parts)}"
+                        log_entry = self.controller.game_state.game_log.add_entry(
+                            log_type=LogType.AI_DECISION,
+                            turn_number=self.controller.game_state.turn_number,
+                            round_number=self.controller.game_state.round_number,
+                            summary=summary,
+                            nations_involved=[current_nation.id, target_id],
+                            details=log_details,
+                        )
+                        log_entry.add_ai_decision(current_nation.id, prompt, response)
+
                         # Execute the trade
                         trade_action = {
                             "type": "TRADE",
@@ -177,32 +189,18 @@ class AsyncTurnExecutor:
                         summary_parts.append("invalid trade target")
                 else:
                     summary_parts.append("skips trading")
-                    # Break out of trading loop if they chose not to trade
-                    if trade_attempt == 0 or not decision.get("trade"):
-                        summary = f"{current_nation.name}: {', '.join(summary_parts)}"
-                        log_entry = self.controller.game_state.game_log.add_entry(
-                            log_type=LogType.AI_DECISION,
-                            turn_number=self.controller.game_state.turn_number,
-                            round_number=self.controller.game_state.round_number,
-                            summary=summary,
-                            nations_involved=[current_nation.id],
-                            details=log_details,
-                        )
-                        log_entry.add_ai_decision(current_nation.id, prompt, response)
-                        break
-
-                # Log this trading attempt
-                if summary_parts:
+                    # Log skip decision and break out of trading loop
                     summary = f"{current_nation.name}: {', '.join(summary_parts)}"
                     log_entry = self.controller.game_state.game_log.add_entry(
                         log_type=LogType.AI_DECISION,
                         turn_number=self.controller.game_state.turn_number,
                         round_number=self.controller.game_state.round_number,
                         summary=summary,
-                        nations_involved=[current_nation.id, target_id] if target_id else [current_nation.id],
+                        nations_involved=[current_nation.id],
                         details=log_details,
                     )
                     log_entry.add_ai_decision(current_nation.id, prompt, response)
+                    break
 
             # ===== BUILD PHASE =====
             # Check if nation can afford ANY generator
