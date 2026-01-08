@@ -106,6 +106,10 @@ Decide which action to take. Consider:
 2. What generators would help you most?
 3. Which nations have resources you need?
 4. What trades would be fair and beneficial?
+5. You can only buy resources for a certain price if you have the gold for it.
+6. You can only buy resources that exist.
+7. You can only sell resources you have.
+8. You can only sell resources for a certain price if the other nation has the gold for it.
 
 Respond with JSON in this format:
 {{
@@ -165,6 +169,10 @@ Consider:
 3. Is this a fair trade?
 4. How is your relationship with them? (Current: {relationship})
 5. Will this help you reach your era advancement goals?
+6. You can only buy resources for a certain price if you have the gold for it.
+7. You can only buy resources that exist.
+8. You can only sell resources you have.
+9. You can only sell resources for a certain price if the other nation has the gold for it.
 
 Respond with JSON:
 {{
