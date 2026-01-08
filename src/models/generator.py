@@ -1,0 +1,118 @@
+"""Generator models for resource production."""
+
+from typing import TYPE_CHECKING, Dict, Optional
+
+from pydantic import BaseModel, Field
+
+from .enums import GeneratorType, ResourceType
+
+if TYPE_CHECKING:
+    from .resource import ResourceInventory
+
+
+class Generator(BaseModel):
+    """Represents a resource generator building."""
+
+    generator_type: GeneratorType
+    produces: ResourceType
+    generation_amount: int = Field(default=10)
+    required_era: int = Field(default=0)
+
+    def generate(self, era_multiplier: int = 1) -> int:
+        """Generate resources based on era multiplier."""
+        return self.generation_amount * era_multiplier
+
+    class Config:
+        """Pydantic configuration."""
+
+        arbitrary_types_allowed = True
+
+
+class GeneratorBlueprint(BaseModel):
+    """Blueprint for building a generator with costs."""
+
+    generator_type: GeneratorType
+    name: str
+    produces: ResourceType
+    base_cost: Dict[ResourceType, int] = Field(default_factory=dict)
+    base_cost_any: Optional[int] = None  # For Farm which accepts any resource
+    required_era: int = Field(default=0)
+
+    def get_current_cost(self, count_built: int) -> Dict[ResourceType, int]:
+        """
+        Calculate current cost based on progressive pricing.
+
+        Formula: current_cost = base_cost * (count_built + 1)
+        """
+        multiplier = count_built + 1
+        return {
+            resource_type: cost * multiplier
+            for resource_type, cost in self.base_cost.items()
+        }
+
+    def can_pay_with_any(
+        self, inventory: "ResourceInventory", count_built: int
+    ) -> Optional[ResourceType]:
+        """
+        Check if can pay with any single resource (for Farm).
+
+        Returns the resource type that can be used, or None.
+        """
+        if self.base_cost_any is None:
+            return None
+
+        required_amount = self.base_cost_any * (count_built + 1)
+
+        for resource_type in ResourceType:
+            if inventory.has(resource_type, required_amount):
+                return resource_type
+
+        return None
+
+    class Config:
+        """Pydantic configuration."""
+
+        arbitrary_types_allowed = True
+
+
+class GeneratorManager:
+    """Manages generator blueprints and creation."""
+
+    def __init__(self):
+        self.blueprints: Dict[GeneratorType, GeneratorBlueprint] = {}
+
+    def register_blueprint(self, blueprint: GeneratorBlueprint) -> None:
+        """Register a generator blueprint."""
+        self.blueprints[blueprint.generator_type] = blueprint
+
+    def get_blueprint(self, generator_type: GeneratorType) -> Optional[GeneratorBlueprint]:
+        """Get a generator blueprint by type."""
+        return self.blueprints.get(generator_type)
+
+    def create_generator(
+        self, generator_type: GeneratorType, era_index: int
+    ) -> Optional[Generator]:
+        """Create a generator instance from blueprint."""
+        blueprint = self.get_blueprint(generator_type)
+        if blueprint is None:
+            return None
+
+        # Calculate generation amount based on era
+        era_configs = [
+            {"base": 10, "multiplier": 1},      # Era 0
+            {"base": 100, "multiplier": 10},    # Era 1
+            {"base": 1000, "multiplier": 100},  # Era 2
+        ]
+
+        era_config = era_configs[min(era_index, len(era_configs) - 1)]
+
+        return Generator(
+            generator_type=generator_type,
+            produces=blueprint.produces,
+            generation_amount=era_config["base"],
+            required_era=blueprint.required_era,
+        )
+
+    def get_all_blueprints(self) -> Dict[GeneratorType, GeneratorBlueprint]:
+        """Get all registered blueprints."""
+        return self.blueprints.copy()

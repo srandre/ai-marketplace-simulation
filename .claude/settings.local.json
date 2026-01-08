@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if not exist \"README.md\" echo .)",
+      "Bash(touch:*)"
+    ]
+  }
+}

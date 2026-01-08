@@ -1,0 +1,217 @@
+"""Trading system for resource exchange between nations."""
+
+from typing import Optional
+
+from ..models.enums import LogType, TransactionStatus
+from ..models.transaction import TradeOffer, Transaction
+from ..utils.config import config
+from .game_state import GameState
+
+
+class TradingManager:
+    """Manages trading between nations."""
+
+    def __init__(self, game_state: GameState):
+        self.game_state = game_state
+
+    def propose_trade(
+        self, initiator_id: int, responder_id: int, offer: TradeOffer
+    ) -> Optional[Transaction]:
+        """
+        Initiate a trade proposal.
+
+        Returns the Transaction object if valid, None otherwise.
+        """
+        initiator = self.game_state.get_nation(initiator_id)
+        responder = self.game_state.get_nation(responder_id)
+
+        if not initiator or not responder:
+            return None
+
+        if not offer.is_valid():
+            return None
+
+        # Check if initiator has the resources they're offering
+        if not initiator.inventory.has_multiple(offer.offering):
+            return None
+
+        # Create transaction
+        transaction = Transaction(
+            initiator_id=initiator_id,
+            responder_id=responder_id,
+            current_offer=offer,
+            status=TransactionStatus.PROPOSED,
+            turn_number=self.game_state.turn_number,
+        )
+
+        # Log the proposal
+        offer_str = ", ".join(
+            f"{v} {k.value}" for k, v in offer.offering.items() if v > 0
+        )
+        request_str = ", ".join(
+            f"{v} {k.value}" for k, v in offer.requesting.items() if v > 0
+        )
+
+        self.game_state.game_log.add_entry(
+            log_type=LogType.TRADE_PROPOSAL,
+            turn_number=self.game_state.turn_number,
+            summary=f"{initiator.flag} proposes to {responder.flag}: Offer [{offer_str}] for [{request_str}]",
+            nations_involved=[initiator_id, responder_id],
+            details={"offer": offer.to_dict()},
+        )
+
+        return transaction
+
+    def accept_trade(self, transaction: Transaction) -> tuple[bool, str]:
+        """
+        Accept a trade and execute the resource transfer.
+
+        Returns (success, message).
+        """
+        initiator = self.game_state.get_nation(transaction.initiator_id)
+        responder = self.game_state.get_nation(transaction.responder_id)
+
+        if not initiator or not responder:
+            return False, "Nations not found"
+
+        # Get the active offer
+        active_offer = transaction.get_active_offer()
+
+        # Determine who gives and receives what based on transaction state
+        if transaction.status == TransactionStatus.COUNTER_PROPOSED:
+            # Counter-offer: responder is now offering, initiator receives
+            giver = responder
+            receiver = initiator
+            giving = active_offer.offering
+            receiving = active_offer.requesting
+        else:
+            # Original offer: initiator offers, responder receives
+            giver = initiator
+            receiver = responder
+            giving = active_offer.offering
+            receiving = active_offer.requesting
+
+        # Verify resources
+        if not giver.inventory.has_multiple(giving):
+            return False, "Giver has insufficient resources"
+
+        if not receiver.inventory.has_multiple(receiving):
+            return False, "Receiver has insufficient resources"
+
+        # Execute transfer
+        giver.inventory.remove_multiple(giving)
+        receiver.inventory.remove_multiple(receiving)
+
+        # Giver receives what receiver was offering
+        for resource_type, amount in receiving.items():
+            giver.inventory.add(resource_type, amount)
+
+        # Receiver receives what giver was offering
+        for resource_type, amount in giving.items():
+            receiver.inventory.add(resource_type, amount)
+
+        # Update transaction status
+        transaction.complete()
+
+        # Update relationships (successful trade)
+        relationship_bonus = config.get("diplomacy.successful_trade_bonus", 1)
+        initiator.update_relationship(
+            responder.id,
+            relationship_bonus,
+            config.get("diplomacy.relationship_min", -100),
+            config.get("diplomacy.relationship_max", 100),
+        )
+        responder.update_relationship(
+            initiator.id,
+            relationship_bonus,
+            config.get("diplomacy.relationship_min", -100),
+            config.get("diplomacy.relationship_max", 100),
+        )
+
+        # Add to transaction history
+        self.game_state.transaction_history.add(transaction)
+
+        # Log the completion
+        self.game_state.game_log.add_entry(
+            log_type=LogType.TRADE_COMPLETED,
+            turn_number=self.game_state.turn_number,
+            summary=f"{initiator.flag} and {responder.flag} completed trade",
+            nations_involved=[transaction.initiator_id, transaction.responder_id],
+            details={"offer": active_offer.to_dict()},
+        )
+
+        return True, "Trade completed successfully"
+
+    def reject_trade(self, transaction: Transaction) -> None:
+        """Reject a trade proposal."""
+        initiator = self.game_state.get_nation(transaction.initiator_id)
+        responder = self.game_state.get_nation(transaction.responder_id)
+
+        if not initiator or not responder:
+            return
+
+        transaction.reject()
+
+        # Update relationships (failed trade)
+        relationship_penalty = config.get("diplomacy.failed_trade_penalty", -1)
+        initiator.update_relationship(
+            responder.id,
+            relationship_penalty,
+            config.get("diplomacy.relationship_min", -100),
+            config.get("diplomacy.relationship_max", 100),
+        )
+        responder.update_relationship(
+            initiator.id,
+            relationship_penalty,
+            config.get("diplomacy.relationship_min", -100),
+            config.get("diplomacy.relationship_max", 100),
+        )
+
+        # Log the rejection
+        self.game_state.game_log.add_entry(
+            log_type=LogType.TRADE_REJECTED,
+            turn_number=self.game_state.turn_number,
+            summary=f"{responder.flag} rejected trade from {initiator.flag}",
+            nations_involved=[transaction.initiator_id, transaction.responder_id],
+        )
+
+    def counter_propose(
+        self, transaction: Transaction, counter_offer: TradeOffer
+    ) -> tuple[bool, str]:
+        """
+        Make a counter-proposal to a trade.
+
+        Returns (success, message).
+        """
+        responder = self.game_state.get_nation(transaction.responder_id)
+
+        if not responder:
+            return False, "Responder nation not found"
+
+        if not counter_offer.is_valid():
+            return False, "Invalid counter-offer"
+
+        # Check if responder has resources for counter-offer
+        if not responder.inventory.has_multiple(counter_offer.offering):
+            return False, "Insufficient resources for counter-offer"
+
+        transaction.counter_propose(counter_offer)
+
+        # Log the counter-proposal
+        initiator = self.game_state.get_nation(transaction.initiator_id)
+        offer_str = ", ".join(
+            f"{v} {k.value}" for k, v in counter_offer.offering.items() if v > 0
+        )
+        request_str = ", ".join(
+            f"{v} {k.value}" for k, v in counter_offer.requesting.items() if v > 0
+        )
+
+        self.game_state.game_log.add_entry(
+            log_type=LogType.TRADE_COUNTER,
+            turn_number=self.game_state.turn_number,
+            summary=f"{responder.flag} counters {initiator.flag}: Offer [{offer_str}] for [{request_str}]",
+            nations_involved=[transaction.initiator_id, transaction.responder_id],
+            details={"counter_offer": counter_offer.to_dict()},
+        )
+
+        return True, "Counter-proposal submitted"
