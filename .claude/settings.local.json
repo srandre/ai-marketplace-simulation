@@ -3,7 +3,8 @@
     "allow": [
       "Bash(if not exist \"README.md\" echo .)",
       "Bash(touch:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(pip install:*)"
     ]
   }
 }

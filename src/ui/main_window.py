@@ -1,6 +1,8 @@
 """Main game window with Pygame."""
 
 import pygame
+import pyperclip
+import json
 from typing import Optional
 
 from ..game.game_controller import GameController
@@ -65,6 +67,10 @@ class MainWindow:
         # Tooltip state
         self.tooltip_log = None
         self.tooltip_timer = 0
+
+        # Copy button state
+        self.copy_button_rect = None
+        self.copy_button_hover = False
         self.tooltip_delay = 30  # frames (~0.5 seconds at 60fps)
         self.info_button_hovered = False
 
@@ -303,6 +309,11 @@ class MainWindow:
                     self.modal_scroll_offset = 0
                     continue
 
+                # Check if clicked on copy button
+                if self.copy_button_rect and self.copy_button_rect.collidepoint(mouse_pos):
+                    self._copy_log_to_clipboard()
+                    continue
+
                 # Check if clicked on scrollbar
                 scrollbar_clicked = self._check_scrollbar_click(mouse_pos)
                 if scrollbar_clicked:
@@ -453,6 +464,7 @@ class MainWindow:
         # Draw log details if selected
         if self.selected_log and hasattr(self, 'panel_detail'):
             self._draw_log_details()
+            self._draw_copy_button()
 
         # Draw buttons
         for button in self.buttons:
@@ -1521,6 +1533,80 @@ class MainWindow:
         # Draw thumb
         thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
         draw_rounded_rect(self.screen, colors.ACCENT, thumb_rect, border_radius=4)
+
+    def _draw_copy_button(self):
+        """Draw copy button in the detail panel."""
+        if not hasattr(self, 'panel_detail'):
+            return
+
+        # Button dimensions and position (next to "Log Details" title in panel header)
+        button_width = 60
+        button_height = 24
+        button_x = self.panel_detail.rect.x + self.panel_detail.rect.width - button_width - 15
+        button_y = self.panel_detail.rect.y + 10  # Aligned with panel title
+
+        # Create button rect
+        self.copy_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+
+        # Check hover state
+        mouse_pos = pygame.mouse.get_pos()
+        is_hover = self.copy_button_rect.collidepoint(mouse_pos)
+
+        # Draw button
+        button_color = colors.HOVER if is_hover else colors.PRIMARY
+        border_color = colors.ACCENT if is_hover else colors.BORDER
+        draw_rounded_rect(self.screen, button_color, self.copy_button_rect, border_radius=5)
+        draw_rounded_rect_border(self.screen, border_color, self.copy_button_rect, border_radius=5, width=2)
+
+        # Draw text
+        text_color = colors.TEXT
+        text_surf = self.font_small.render("Copy", True, text_color)
+        text_rect = text_surf.get_rect(center=self.copy_button_rect.center)
+        self.screen.blit(text_surf, text_rect)
+
+    def _extract_log_text(self, log) -> str:
+        """Extract all text from a log entry for copying."""
+        lines = []
+
+        # Header
+        lines.append(f"{log.log_type.value} - Turn {log.turn_number}")
+        lines.append("")
+
+        # Summary
+        lines.append(log.summary)
+        lines.append("")
+
+        # Details
+        if log.details:
+            lines.append("=== Details ===")
+            lines.append(json.dumps(log.details, indent=2))
+            lines.append("")
+
+        # AI Decisions
+        if log.ai_decisions:
+            for decision in log.ai_decisions:
+                nation = self.controller.game_state.get_nation(decision.nation_id)
+                if nation:
+                    lines.append(f"=== AI Decision - {nation.name} ===")
+                    lines.append("")
+                    lines.append("Response:")
+                    lines.append(decision.response)
+                    lines.append("")
+                    lines.append("User Prompt:")
+                    lines.append(decision.prompt)
+                    lines.append("")
+
+        return "\n".join(lines)
+
+    def _copy_log_to_clipboard(self):
+        """Copy selected log to clipboard."""
+        if self.selected_log:
+            text = self._extract_log_text(self.selected_log)
+            try:
+                pyperclip.copy(text)
+                print("[INFO] Log copied to clipboard")
+            except Exception as e:
+                print(f"[ERROR] Failed to copy to clipboard: {e}")
 
     def run(self) -> None:
         """Main game loop."""

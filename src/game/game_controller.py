@@ -390,6 +390,8 @@ class GameController:
         default_decision = {
             "retry": False,
             "target_nation_id": None,
+            "offering": {},
+            "requesting": {},
             "reasoning": "Unable to determine alternative partner"
         }
 
@@ -406,6 +408,15 @@ class GameController:
 
         # Check if AI wants to retry with a different partner
         if decision.get("retry") and decision.get("target_nation_id") is not None:
+            # Get new offering/requesting from decision, or fall back to original
+            new_offering = decision.get("offering", offering)
+            new_requesting = decision.get("requesting", requesting)
+
+            # Validate that offering and requesting are provided
+            if not new_offering or not new_requesting:
+                print(f"[WARNING] AI retry decision missing offering or requesting. Using original trade.")
+                new_offering = offering
+                new_requesting = requesting
             # Validate that the AI didn't select the same nation that rejected the trade
             if decision["target_nation_id"] == rejected_target_id:
                 print(f"[WARNING] AI selected the same nation ({rejected_target_id}) that rejected the trade. Ignoring retry.")
@@ -430,20 +441,27 @@ class GameController:
             new_target = self.game_state.get_nation(decision["target_nation_id"])
             new_target_name = new_target.name if new_target else f"Nation {decision['target_nation_id']}"
 
+            # Check if trade is different from original
+            is_different_trade = (new_offering != offering or new_requesting != requesting)
+            trade_type = "different trade" if is_different_trade else "same trade"
+
             # Log the decision to retry with new partner
             log_entry = self.game_state.game_log.add_entry(
                 log_type=LogType.AI_DECISION,
                 turn_number=self.game_state.turn_number,
                 round_number=self.game_state.round_number,
-                summary=f"{nation.name} seeks alternative trade partner: {new_target_name}",
+                summary=f"{nation.name} seeks alternative trade partner: {new_target_name} ({trade_type})",
                 nations_involved=[nation.id, decision["target_nation_id"]],
                 details={
                     "action_type": "ALTERNATIVE_TRADE",
                     "rejected_by": rejected_target_id,
                     "new_target": decision["target_nation_id"],
                     "retry": True,
-                    "offering": offering,
-                    "requesting": requesting
+                    "is_different_trade": is_different_trade,
+                    "original_offering": offering,
+                    "original_requesting": requesting,
+                    "new_offering": new_offering,
+                    "new_requesting": new_requesting
                 },
             )
             log_entry.add_ai_decision(nation.id, user_prompt, raw_response)
@@ -451,8 +469,8 @@ class GameController:
             return {
                 "type": "TRADE",
                 "target_nation_id": decision["target_nation_id"],
-                "offering": offering,
-                "requesting": requesting,
+                "offering": new_offering,
+                "requesting": new_requesting,
                 "reasoning": decision.get("reasoning", "Retrying trade with alternative partner")
             }
 
