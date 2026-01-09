@@ -45,23 +45,31 @@ class GameState(BaseModel):
         # Initialize generator blueprints
         self._initialize_generators()
 
-        # Create nations
-        available_generators = [
-            GeneratorType.MINE,
-            GeneratorType.LUMBER_CAMP,
-            GeneratorType.QUARRY,
-            GeneratorType.FARM,
+        # Create nations with specific generator distribution
+        # 4 money generators, 2 stone, 2 wood, 2 food
+        assigned_generators = [
+            GeneratorType.MINE,      # Money 1
+            GeneratorType.MINE,      # Money 2
+            GeneratorType.MINE,      # Money 3
+            GeneratorType.MINE,      # Money 4
+            GeneratorType.QUARRY,    # Stone 1
+            GeneratorType.QUARRY,    # Stone 2
+            GeneratorType.LUMBER_CAMP,  # Wood 1
+            GeneratorType.LUMBER_CAMP,  # Wood 2
+            GeneratorType.FARM,      # Food 1
+            GeneratorType.FARM,      # Food 2
         ]
 
-        # Ensure at least one generator is assigned
-        assigned_generators = []
-        for i in range(num_players):
-            if i < len(available_generators):
-                assigned_generators.append(available_generators[i % len(available_generators)])
-            else:
-                assigned_generators.append(random.choice(available_generators))
+        # If there are more players than planned generators, fill with random ones
+        while len(assigned_generators) < num_players:
+            assigned_generators.append(random.choice([
+                GeneratorType.MINE,
+                GeneratorType.LUMBER_CAMP,
+                GeneratorType.QUARRY,
+                GeneratorType.FARM,
+            ]))
 
-        # Shuffle to randomize
+        # Shuffle to randomize which nation gets which generator
         random.shuffle(assigned_generators)
 
         # Get initial era from config

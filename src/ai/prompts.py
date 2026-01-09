@@ -347,7 +347,6 @@ Your reasoning MUST:
 1. Start by stating what YOU have (your own resources)
 2. State what the target nation HAS
 3. End with "Therefore, I will trade with [NAME]" or "Therefore, I will skip trading"
-4. Have maximum of 150 characters
 
 Examples of GOOD reasoning:
 - "I have 50 WOOD. Norway has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings. Therefore, I will trade with Norway."
@@ -403,20 +402,31 @@ GAME STATE:
 You can now build ONE generator, or skip building.
 
 BUILDING RULES:
-- Check generator_costs for exact prices
-- Prices increase exponentially: base_cost × 2^n (n = already built globally)
+- Check generator_costs for exact prices (these are the ACTUAL current costs, already calculated)
 - For FARM: You MUST specify payment_resource (WOOD or STONE)
-- For MINE, FACTORY or INFORMATION: You MUST have enough of both resource requirements to build one
-- Only build if you have enough resources
+- Only build if you can AFFORD it
+
+BEFORE BUILDING, COMPLETE THIS VERIFICATION CHECKLIST:
+
+Step 1: Which generator do I want to build?
+Step 2: What does it cost? (Check "generator_costs" - these are EXACT current prices)
+Step 3: Do I HAVE enough resources to afford it? (Compare cost to YOUR resources in "your_nation.resources")
+Step 4: If you DON'T have enough → set build: false
+
+CRITICAL VERIFICATION:
+- If generator costs {{"WOOD": 80, "STONE": 80}} and you have {{"WOOD": 50, "STONE": 60}} → YOU CANNOT BUILD IT!
+- If FARM costs {{"WOOD or STONE": 40}} and you have {{"WOOD": 30, "STONE": 10}} → YOU CANNOT BUILD IT!
+- Always verify EVERY resource in the cost against YOUR resources
 
 STRATEGY:
 - Which generator helps you reach the next era?
-- Do you have enough resources for it?
+- Do you have enough resources for it RIGHT NOW?
 - Will this generator produce resources you need?
 
 CRITICAL: Your JSON response MUST match your reasoning!
-- If your reasoning says "build FARM", then generator_type MUST be "FARM"
+- If your reasoning says "build FARM", then build MUST be true and generator_type MUST be "FARM"
 - If your reasoning says "cannot afford", then build MUST be false
+- If your reasoning says "I will skip building", then build MUST be false
 - DO NOT write one thing in reasoning and different thing in JSON!
 
 Respond with JSON:
@@ -424,16 +434,23 @@ Respond with JSON:
     "build": true/false,
     "generator_type": "LUMBER_CAMP" or "QUARRY" or "FARM" or "MINE" or "FACTORY" or "DATACENTER" or null,
     "payment_resource": "WOOD" or "STONE" (only for FARM) or null,
-    "reasoning": "Brief explanation ending with: 'Therefore, I will build [GENERATOR_NAME]' or 'Therefore, I will skip building'"
+    "reasoning": "State what you have, what the generator costs, then conclude. End with: 'Therefore, I will build [GENERATOR_NAME]' or 'Therefore, I will skip building'"
 }}
 
-Your reasoning MUST end with explicitly stating your choice!
-Also:
-- Reasoning should be under 150 characters
+Your reasoning MUST:
+1. State what resources YOU have
+2. State what the generator COSTS
+3. End with "Therefore, I will build [X]" or "Therefore, I will skip building"
 
-Examples:
-- "I need GOLD for era advancement. I can afford FARM with 40 STONE. Therefore, I will build FARM."
-- "I need WOOD but all generators are too expensive. Therefore, I will skip building."
+Examples of GOOD reasoning:
+- "I have 80 WOOD, 80 STONE. MINE costs 80 WOOD + 80 STONE. I can afford it and need TECHNOLOGY. Therefore, I will build MINE."
+- "I have 40 STONE, 20 WOOD. FARM costs 40 WOOD or STONE. I'll pay with STONE to save WOOD. Therefore, I will build FARM."
+- "I have 30 WOOD, 25 STONE. FARM costs 40 (WOOD or STONE). I cannot afford any generator. Therefore, I will skip building."
+
+Examples of BAD reasoning (NEVER do this):
+- "I need MINE so I'll build it" ← WRONG! Didn't verify if you can afford it!
+- "MINE costs 80 WOOD + 80 STONE. Therefore, I will build MINE" ← WRONG! Didn't check if YOU have 80 of each!
+- Reasoning says "skip" but JSON has build: true ← WRONG! Must match!
 
 If you don't want to build (or can't afford anything), set build: false.
 If you want to build, set build: true and specify the generator_type matching your reasoning."""
@@ -476,31 +493,48 @@ TRADE OFFER:
 The proposer offers: {offer.get('offering', {})}
 The proposer requests: {offer.get('requesting', {})}
 
+BEFORE RESPONDING, COMPLETE THIS VERIFICATION CHECKLIST:
+
+Step 1: What are they requesting from me? (Check "offer.requesting")
+Step 2: Do I HAVE what they're requesting? (Compare to YOUR resources in "your_nation.resources")
+Step 3: If I DON'T have enough → I MUST REJECT (cannot complete the trade)
+Step 4: What are they offering me? Do I need it?
+Step 5: Is this a fair trade?
+
+CRITICAL VERIFICATION:
+- If they request {{"GOLD": 100}} and you have {{"GOLD": 50}} → YOU MUST REJECT! You don't have enough!
+- If they request {{"WOOD": 50, "STONE": 30}} and you have {{"WOOD": 40, "STONE": 60}} → YOU MUST REJECT! You lack WOOD!
+- Always verify EVERY resource they're requesting against YOUR resources
+
 Consider:
-1. Do you have what they're requesting?
+1. Do you have what they're requesting? (MANDATORY CHECK - if NO, must REJECT)
 2. Do you need what they're offering?
 3. Is this a fair trade (consider market value)?
 4. How is your relationship with them? (Current: {relationship})
 5. Will this help you reach your era advancement goals?
-6. Consider the feasibility of the transaction. If it mathematically can't be completed by any of the parts, do not accept it.
 
 REMEMBER: All trades must follow the gold-only rule:
 - One side must be ONLY GOLD
 - The other side must have NO GOLD
 
-Also:
-- Reasoning should be under 150 characters
 Respond with JSON:
 {{
     "decision": "ACCEPT" | "COUNTER" | "REJECT",
-    "reasoning": "why you made this choice",
+    "reasoning": "State what they request, what YOU have, then your decision",
     "counter_offer": {{
         "offering": {{"WOOD": 30, "STONE": 20}},
         "requesting": {{"GOLD": 50}}
-        "offering": {{"GOLD": 50}},
-        "requesting": {{"WOOD": 30, "STONE": 20}}
-    }}
-}}"""
+    }} (only if decision is COUNTER, otherwise null)
+}}
+
+Examples of GOOD reasoning:
+- "They request 100 GOLD. I have 150 GOLD and need their WOOD. Fair trade. Therefore, I will ACCEPT."
+- "They request 50 WOOD. I only have 30 WOOD. I cannot complete this trade. Therefore, I will REJECT."
+- "They request 80 STONE. I have 80 STONE but this is unfair (too much for 50 GOLD). Therefore, I will COUNTER."
+
+Examples of BAD reasoning (NEVER do this):
+- "Good trade, I'll accept" ← WRONG! Didn't verify you HAVE what they request!
+- "I need their resources" ← WRONG! Didn't check if you can afford what they want!"""
 
     return prompt
 
@@ -534,14 +568,32 @@ COUNTER-OFFER:
 They offer: {counter_offer.get('offering', {})}
 They request: {counter_offer.get('requesting', {})}
 
+BEFORE RESPONDING, VERIFY:
+
+Step 1: What are they requesting from me? (Check their "requesting")
+Step 2: Do I HAVE what they're requesting? (Compare to YOUR resources in "your_nation.resources")
+Step 3: If I DON'T have enough → I MUST REJECT (cannot complete the trade)
+Step 4: Is this counter-offer fair and beneficial?
+
+CRITICAL VERIFICATION:
+- If they request {{"GOLD": 100}} and you have {{"GOLD": 50}} → YOU MUST REJECT!
+- If they request {{"WOOD": 50}} and you have {{"WOOD": 40}} → YOU MUST REJECT!
+- Always verify EVERY resource they're requesting against YOUR resources
+
 Decide whether to accept or reject this counter-offer.
-Also:
-- Reasoning should be under 150 characters
+
 Respond with JSON:
 {{
     "decision": "ACCEPT" | "REJECT",
-    "reasoning": "why you made this choice"
-}}"""
+    "reasoning": "State what they request, what YOU have, then your decision"
+}}
+
+Examples of GOOD reasoning:
+- "They request 80 GOLD. I have 120 GOLD and need their WOOD. Therefore, I will ACCEPT."
+- "They request 50 WOOD. I only have 30 WOOD. I cannot fulfill this. Therefore, I will REJECT."
+
+Examples of BAD reasoning (NEVER do this):
+- "Fair deal, I'll accept" ← WRONG! Didn't verify you HAVE what they request!"""
 
     return prompt
 
@@ -584,23 +636,40 @@ You can attempt the SAME trade (same offering/requesting) with a DIFFERENT partn
 
 NOTE: If you set retry: false, your trading phase ends and you move to the build phase.
 
+BEFORE RETRYING, COMPLETE THIS VERIFICATION CHECKLIST:
+
+Step 1: Do I still HAVE what I want to offer? (Check YOUR resources - you might have traded them away)
+Step 2: Does the alternative nation HAVE what I'm requesting? (Check their resources)
+Step 3: If either answer is NO → set retry: false
+
+CRITICAL VERIFICATION:
+- If you want to offer {{"GOLD": 100}} but you only have {{"GOLD": 50}} → DO NOT RETRY!
+- If you want to request {{"WOOD": 50}} but alternative nation has {{"WOOD": 30}} → DO NOT RETRY!
+- Always verify BOTH what you're offering (you must have it) AND what you're requesting (they must have it)
+
 IMPORTANT RULES:
-1. You can only retry with a nation that HAS the resources you're requesting
-2. One side must be ONLY GOLD, other side NO GOLD
-3. Choose wisely - consider relationships and strategic value
-4. If no good alternative exists, set retry: false
-5. This is your last chance to trade this turn. If this retry is rejected, you may not try again
+1. You must still HAVE what you want to offer
+2. The alternative nation must HAVE what you're requesting
+3. One side must be ONLY GOLD, other side NO GOLD
+4. Choose wisely - consider relationships and strategic value
+5. If no good alternative exists, set retry: false
+6. This is your last chance to trade this turn. If this retry is rejected, you may not try again
 
 Respond with JSON:
 {{
     "retry": true/false,
     "target_nation_id": <nation_id or null>,
-    "reasoning": "why you chose this partner or why you're not retrying (max 100 chars)"
+    "reasoning": "State what YOU have, what THEY have, then your decision"
 }}
 
-Example responses:
-{{"retry": true, "target_nation_id": 2, "reasoning": "USA has the resources and good relationship"}}
-{{"retry": false, "target_nation_id": null, "reasoning": "No other nation has enough wood available"}}
+Examples of GOOD reasoning:
+{{"retry": true, "target_nation_id": 2, "reasoning": "I have 100 GOLD. USA has 60 WOOD. They can fulfill my request. Therefore, I will retry with USA."}}
+{{"retry": false, "target_nation_id": null, "reasoning": "I have 0 GOLD left. I cannot offer GOLD anymore. Therefore, I will not retry."}}
+{{"retry": false, "target_nation_id": null, "reasoning": "No other nation has enough WOOD. Therefore, I will not retry."}}
+
+Examples of BAD reasoning (NEVER do this):
+- "I'll try with USA" ← WRONG! Didn't verify YOU have what you're offering!
+- "USA has resources so I'll retry" ← WRONG! Didn't check if they have what YOU need!
 """
 
     return prompt
