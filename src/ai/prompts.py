@@ -322,8 +322,14 @@ CRITICAL: Your JSON response MUST match your reasoning!
 - If your reasoning says "Therefore, I will skip trading", then trade MUST be false
 - If your reasoning says "trade is invalid", then trade MUST be false
 - If your reasoning says "I cannot sell/buy", then trade MUST be false
-- If your reasoning says "Therefore, I will trade with X", then trade MUST be true and target_nation_id MUST be X
+- If your reasoning says "Therefore, I will trade with X", then trade MUST be true and target_nation_id MUST be X's ID
 - DO NOT write one thing in reasoning and different thing in JSON!
+
+DOUBLE-CHECK YOUR target_nation_id:
+If your reasoning mentions "Thailand" → find Thailand's ID in "other_nations" and use THAT ID
+If your reasoning mentions "Turkey" → find Turkey's ID in "other_nations" and use THAT ID
+Example: Reasoning says "Therefore, I will trade with Thailand" and Thailand's id is 1 → target_nation_id MUST be 1
+WRONG: Reasoning says "Thailand" but target_nation_id is 2 (that's Turkey, not Thailand!)
 
 WHEN TO SKIP (trade: false):
 - No nation has what you're requesting (if buying)
@@ -358,6 +364,7 @@ Examples of BAD reasoning (NEVER do this):
 - "Egypt has wood but no gold, so I'll sell stone for gold" ← WRONG! They have no gold!
 - "I need resources so I'll trade" ← Didn't verify YOU have what you're offering!
 - "I'll offer 100 GOLD to buy WOOD" when you have 0 GOLD ← WRONG! You don't have GOLD!
+- Reasoning says "Therefore, I will trade with Thailand" but JSON has target_nation_id: 2 (Turkey) ← WRONG! IDs don't match!
 - Reasoning says "invalid" but JSON has trade: true ← WRONG! Must match!
 
 NOTE: Setting trade: false ends your trading phase and moves you to the build phase."""
@@ -427,7 +434,17 @@ CRITICAL: Your JSON response MUST match your reasoning!
 - If your reasoning says "build FARM", then build MUST be true and generator_type MUST be "FARM"
 - If your reasoning says "cannot afford", then build MUST be false
 - If your reasoning says "I will skip building", then build MUST be false
+- If your reasoning says "I lack X" or "I cannot afford", then build MUST be false
 - DO NOT write one thing in reasoning and different thing in JSON!
+
+ABSOLUTE RULE - READ THIS CAREFULLY:
+If your reasoning contains ANY of these phrases, then build MUST be false:
+- "I cannot afford"
+- "I lack"
+- "Therefore, I will skip building"
+- "I don't have enough"
+
+If your reasoning says you CANNOT afford something, then build = false. Period. No exceptions.
 
 REASONING FORMAT - KEEP IT SHORT AND FOCUSED:
 Your reasoning should be 1-2 sentences maximum. Do NOT analyze multiple generators. Pick ONE and verify it.
@@ -458,6 +475,7 @@ Examples of BAD reasoning (NEVER do this):
 - "I need MINE so I'll build it" ← WRONG! Didn't verify if you can afford it!
 - "MINE costs 80 WOOD + 80 STONE. Therefore, I will build MINE" ← WRONG! Didn't check if YOU have 80 of each!
 - "I can't afford QUARRY. I can't afford LUMBER. Therefore I will build FARM" ← WRONG! Too long, confusing!
+- "I cannot afford it because I lack 50 GOLD. Therefore, I will skip building" but JSON has build: true ← WRONG! Must be false!
 - Reasoning says "Therefore, I will build FARM" but JSON has generator_type: "QUARRY" ← WRONG! Must match!
 - Reasoning says "skip" but JSON has build: true ← WRONG! Must match!
 

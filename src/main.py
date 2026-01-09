@@ -7,7 +7,7 @@ from .ui.main_window import MainWindow
 def main():
     """Initialize and run the game."""
     print("=" * 60)
-    print("AI Nations: Strategic Resource Game")
+    print("Rise of AI: Strategic Resource Game")
     print("=" * 60)
     print()
     print("Initializing game...")

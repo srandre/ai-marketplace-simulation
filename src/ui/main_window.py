@@ -27,7 +27,7 @@ class MainWindow:
 
         # Create window and maximize it
         self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
-        pygame.display.set_caption("AI Nations: Strategic Resource Game")
+        pygame.display.set_caption("Rise of AI: Strategic Resource Game")
 
         # Maximize the window (platform-specific)
         import ctypes
@@ -1474,6 +1474,7 @@ class MainWindow:
         # Draw system prompt text with wrapping
         y = content_y - self.modal_scroll_offset
         line_height = 20
+        start_y = y  # Track starting Y position
 
         for line in system_prompt.split('\n'):
             if line.strip():
@@ -1502,11 +1503,13 @@ class MainWindow:
                 # Empty line
                 y += line_height // 2
 
+        # Calculate actual rendered height
+        total_content_height = y - start_y
+
         # Reset clipping
         self.screen.set_clip(None)
 
         # Draw scrollbar if needed
-        total_content_height = len(system_prompt.split('\n')) * line_height
         if total_content_height > content_height:
             self._draw_modal_scrollbar(modal_rect, content_rect, total_content_height, content_height)
 

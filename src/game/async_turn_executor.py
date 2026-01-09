@@ -145,7 +145,7 @@ class AsyncTurnExecutor:
                         )
 
                         # Log the proposal BEFORE executing the trade
-                        summary = f"{current_nation.name}: {', '.join(summary_parts)}"
+                        summary = f"{current_nation.name} {', '.join(summary_parts)}"
                         log_entry = self.controller.game_state.game_log.add_entry(
                             log_type=LogType.AI_DECISION,
                             turn_number=self.controller.game_state.turn_number,
@@ -212,7 +212,7 @@ class AsyncTurnExecutor:
                 else:
                     summary_parts.append("skips trading")
                     # Log skip decision and break out of trading loop
-                    summary = f"{current_nation.name}: {', '.join(summary_parts)}"
+                    summary = f"{current_nation.name} {', '.join(summary_parts)}"
                     log_entry = self.controller.game_state.game_log.add_entry(
                         log_type=LogType.AI_DECISION,
                         turn_number=self.controller.game_state.turn_number,
@@ -230,7 +230,7 @@ class AsyncTurnExecutor:
 
             if not can_afford_anything:
                 # Mandatory turn skip - nation cannot afford any generator
-                summary = f"{current_nation.name}: Build Phase skipped (cannot afford any generators)"
+                summary = f"{current_nation.name} skipped Build Phase (cannot afford any generators)"
                 self.controller.game_state.game_log.add_entry(
                     log_type=LogType.ACTION,
                     turn_number=self.controller.game_state.turn_number,
@@ -262,7 +262,7 @@ class AsyncTurnExecutor:
                     )
 
                     # First, log the AI's decision to build
-                    summary = f"{current_nation.name}: attempting to build {gen_type}"
+                    summary = f"{current_nation.name} attempting to build {gen_type}"
                     log_entry = self.controller.game_state.game_log.add_entry(
                         log_type=LogType.AI_DECISION,
                         turn_number=self.controller.game_state.turn_number,
@@ -284,7 +284,7 @@ class AsyncTurnExecutor:
                     self.controller._execute_build_from_plan(current_nation, build_action)
                 else:
                     # Log if they explicitly skip building
-                    summary = f"{current_nation.name}: skips building"
+                    summary = f"{current_nation.name} skipped building"
                     log_entry = self.controller.game_state.game_log.add_entry(
                         log_type=LogType.AI_DECISION,
                         turn_number=self.controller.game_state.turn_number,
