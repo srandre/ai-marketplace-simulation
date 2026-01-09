@@ -8,7 +8,6 @@ from ..models.transaction import TradeOffer
 from .deepseek_client import DeepSeekClient
 from .prompts import (
     create_build_phase_prompt,
-    create_combined_turn_decision_prompt,
     create_counter_offer_response_prompt,
     create_system_prompt,
     create_trade_response_prompt,
@@ -91,32 +90,6 @@ class DecisionMaker:
             "generator_type": None,
             "payment_resource": None,
             "reasoning": "Unable to process build decision",
-        }
-
-        decision, raw_response = self.client.make_decision_with_fallback(
-            self.system_prompt, user_prompt, default_decision
-        )
-
-        return decision, user_prompt, raw_response
-
-    def decide_all_actions(
-        self,
-        nation: Nation,
-        game_state: Dict[str, Any],
-        era_requirements: Dict[str, int],
-    ) -> tuple[Dict[str, Any], str, str]:
-        """
-        Decide all actions for a nation's turn at once (legacy method).
-
-        Returns (decision_dict, user_prompt, ai_response).
-        decision_dict contains an "actions" list with TRADE and/or BUILD actions.
-        """
-        user_prompt = create_combined_turn_decision_prompt(
-            nation, game_state, era_requirements
-        )
-
-        default_decision = {
-            "actions": []  # Empty turn if decision fails
         }
 
         decision, raw_response = self.client.make_decision_with_fallback(

@@ -108,12 +108,23 @@ class GameController:
             outcome=f"Decided to {decision.get('decision', 'REJECT')} trade from {initiator.name}"
         )
 
+        # Process response first to get the decision
+        response_type = decision.get("decision", "REJECT")
+
+        # Create clearer log message based on decision
+        if response_type == "ACCEPT":
+            log_summary = f"{responder.name} accepts trade from {initiator.name}"
+        elif response_type == "COUNTER":
+            log_summary = f"{responder.name} counters trade from {initiator.name}"
+        else:
+            log_summary = f"{responder.name} rejects trade from {initiator.name}"
+
         # Log AI decision with trade offer details
         log_entry = self.game_state.game_log.add_entry(
             log_type=LogType.AI_DECISION,
             turn_number=self.game_state.turn_number,
             round_number=self.game_state.round_number,
-            summary=f"{responder.name} responding to trade",
+            summary=log_summary,
             nations_involved=[initiator.id, responder.id],  # Include both nations
             details={
                 "action_type": "TRADE_RESPONSE",
@@ -122,9 +133,7 @@ class GameController:
         )
         log_entry.add_ai_decision(responder.id, prompt, response)
 
-        # Process response
-        response_type = decision.get("decision", "REJECT")
-
+        # Execute the decision
         if response_type == "ACCEPT":
             self.trading_manager.accept_trade(transaction)
             return "ACCEPTED"
@@ -385,18 +394,59 @@ class GameController:
         }
 
         # Ask AI for alternative using standard decision maker pattern
-        decision, _raw_response = self.decision_maker.client.make_decision_with_fallback(
+        decision, raw_response = self.decision_maker.client.make_decision_with_fallback(
             self.decision_maker.system_prompt,
             user_prompt,
             default_decision
         )
+
+        # Get rejected nation name for logging
+        rejected_nation = self.game_state.get_nation(rejected_target_id)
+        rejected_name = rejected_nation.name if rejected_nation else f"Nation {rejected_target_id}"
 
         # Check if AI wants to retry with a different partner
         if decision.get("retry") and decision.get("target_nation_id") is not None:
             # Validate that the AI didn't select the same nation that rejected the trade
             if decision["target_nation_id"] == rejected_target_id:
                 print(f"[WARNING] AI selected the same nation ({rejected_target_id}) that rejected the trade. Ignoring retry.")
+                # Log the decision to skip retry
+                log_entry = self.game_state.game_log.add_entry(
+                    log_type=LogType.AI_DECISION,
+                    turn_number=self.game_state.turn_number,
+                    round_number=self.game_state.round_number,
+                    summary=f"{nation.name} decides not to retry trade after {rejected_name} rejection",
+                    nations_involved=[nation.id],
+                    details={
+                        "action_type": "ALTERNATIVE_TRADE",
+                        "rejected_by": rejected_target_id,
+                        "retry": False,
+                        "reason": "AI selected same nation that rejected"
+                    },
+                )
+                log_entry.add_ai_decision(nation.id, user_prompt, raw_response)
                 return None
+
+            # Get new target nation name
+            new_target = self.game_state.get_nation(decision["target_nation_id"])
+            new_target_name = new_target.name if new_target else f"Nation {decision['target_nation_id']}"
+
+            # Log the decision to retry with new partner
+            log_entry = self.game_state.game_log.add_entry(
+                log_type=LogType.AI_DECISION,
+                turn_number=self.game_state.turn_number,
+                round_number=self.game_state.round_number,
+                summary=f"{nation.name} seeks alternative trade partner: {new_target_name}",
+                nations_involved=[nation.id, decision["target_nation_id"]],
+                details={
+                    "action_type": "ALTERNATIVE_TRADE",
+                    "rejected_by": rejected_target_id,
+                    "new_target": decision["target_nation_id"],
+                    "retry": True,
+                    "offering": offering,
+                    "requesting": requesting
+                },
+            )
+            log_entry.add_ai_decision(nation.id, user_prompt, raw_response)
 
             return {
                 "type": "TRADE",
@@ -405,6 +455,21 @@ class GameController:
                 "requesting": requesting,
                 "reasoning": decision.get("reasoning", "Retrying trade with alternative partner")
             }
+
+        # Log the decision to not retry
+        log_entry = self.game_state.game_log.add_entry(
+            log_type=LogType.AI_DECISION,
+            turn_number=self.game_state.turn_number,
+            round_number=self.game_state.round_number,
+            summary=f"{nation.name} decides not to retry trade after {rejected_name} rejection",
+            nations_involved=[nation.id],
+            details={
+                "action_type": "ALTERNATIVE_TRADE",
+                "rejected_by": rejected_target_id,
+                "retry": False
+            },
+        )
+        log_entry.add_ai_decision(nation.id, user_prompt, raw_response)
 
         return None
 

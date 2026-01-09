@@ -162,7 +162,7 @@ class MainWindow:
         # Buttons
         self.btn_auto = Button(
             button_spacing, button_y, button_width, button_height,
-            "Auto: OFF",
+            f"Auto: {'ON' if self.auto_mode else 'OFF'}",
             self._toggle_auto_mode,
             enabled=True
         )

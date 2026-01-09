@@ -111,7 +111,7 @@ GAME RULES:
 RESOURCE UNLOCKING BY ERA:
 {resource_unlocking_text}
 
-⚠️ CRITICAL TRADING RULE: You can ONLY trade resources that BOTH you AND your trading partner have unlocked!
+CRITICAL TRADING RULE: You can ONLY trade resources that BOTH you AND your trading partner have unlocked!
 - Example: If you're in a later era and they're in an earlier era, you CANNOT trade advanced resources with them
 - Always check the target nation's era before proposing a trade involving advanced resources
 
@@ -151,6 +151,7 @@ TRADING RULES (CRITICAL):
   ✗ INVALID: Offer [50 WOOD] for [30 GOLD] when the other nation has only [10 GOLD]
 
 DIPLOMACY:
+- Relationships start at 0 (neutral)
 - Successful trades improve relationships (+1)
 - Failed trades hurt relationships (-1)
 - Consider relationships when making offers
@@ -230,21 +231,24 @@ def create_trading_phase_prompt(
         "generator_costs": game_state.get("generator_costs", {}),
     }
 
-    trades_remaining = 2 - trades_completed
-
     if trades_completed == 0:
         phase_text = "TRADING PHASE - First Trade Opportunity (2 trades remaining)"
-        instruction = "You can propose ONE trade to another nation, or skip. If accepted, you'll get another trade opportunity."
+        instruction = """You can propose ONE trade to another nation, or skip.
+
+NOTE: If you skip now, your trading phase ends and you move to the build phase.
+If your trade is accepted, you'll get another trade opportunity. If your trade is rejected, you may retry with a different partner."""
         strategy_note = "You can strategize: for example, sell resources you have for gold, then buy different resources with that gold."
     else:
         phase_text = "TRADING PHASE - Second Trade Opportunity (1 trade remaining)"
-        instruction = """⚠️ IMPORTANT: Check your memory! You just completed a trade THIS TURN.
+        instruction = """IMPORTANT: Check your memory! You just completed a trade THIS TURN.
 DO NOT contradict your previous trade:
 - If you just SOLD a resource, DON'T buy it back immediately (wasteful!)
 - If you just BOUGHT a resource, DON'T sell it back immediately (wasteful!)
 - Your second trade should COMPLEMENT your first trade, not undo it
 
-You can propose ONE final trade to any nation (same or different), or skip."""
+You can propose ONE final trade to any nation (same or different), or skip.
+
+NOTE: This is your last trade opportunity this turn."""
         strategy_note = "This is your last trade opportunity this turn. Make it count and ensure it aligns with your first trade's strategy!"
 
     # Add memory context
@@ -259,8 +263,7 @@ GAME STATE:
 
 {instruction}
 
-⚠️ CRITICAL TRADING RULES - READ CAREFULLY ⚠️
-
+CRITICAL TRADING RULES - READ CAREFULLY 
 1. GOLD-ONLY RULE (MANDATORY):
    - One side offers ONLY GOLD (nothing else)
    - The other side offers ONLY RESOURCES (NO GOLD at all)
@@ -270,41 +273,66 @@ GAME STATE:
      ✗ INVALID: You offer {{"GOLD": 100, "WOOD": 10}} (mixing gold with resources)
      ✗ INVALID: Both sides have resources but no gold
 
-2. VERIFY TARGET NATION HAS WHAT YOU REQUEST (MANDATORY):
-   ⚠️ BEFORE proposing a trade, CHECK the "other_nations" data above!
+2. VERIFY YOU HAVE WHAT YOU'RE OFFERING (MANDATORY):
+   CHECK YOUR OWN RESOURCES FIRST!
+   - If you want to offer GOLD → Do YOU have enough GOLD? Check "your_nation.resources.GOLD"
+   - If you want to offer WOOD/STONE/FOOD → Do YOU have enough? Check "your_nation.resources"
+   - If you DON'T have what you want to offer → YOU CANNOT MAKE THIS TRADE!
+
+   Example: If your resources show {{"GOLD": 0, "WOOD": 50}}, you CANNOT offer GOLD in any trade!
+
+3. VERIFY TARGET NATION HAS WHAT YOU REQUEST (MANDATORY):
+   BEFORE proposing a trade, CHECK the "other_nations" data above!
 
    If you want to BUY resources from a nation:
    - You offer: {{"GOLD": X}}
    - You request: {{"WOOD": Y, "STONE": Z}}
-   - ⚠️ CHECK: Does the target nation have AT LEAST Y WOOD and Z STONE in their "resources"?
+   - CHECK: Does the target nation have AT LEAST Y WOOD and Z STONE in their "resources"?
    - If NO → DO NOT propose this trade! It will fail and waste your opportunity!
 
    If you want to SELL resources for gold:
    - You offer: {{"WOOD": Y, "STONE": Z}}
    - You request: {{"GOLD": X}}
-   - ⚠️ CHECK: Does the target nation have AT LEAST X GOLD in their "resources"?
+   - CHECK: Does the target nation have AT LEAST X GOLD in their "resources"?
    - If NO → DO NOT propose this trade! It will fail and waste your opportunity!
 
-3. NEVER propose to a nation that rejected you before (check your memory)
+4. NEVER propose to a nation that rejected you before (check your memory)
 
-STRATEGY:
-- First, identify what resources you NEED for your goals
-- Then, find which nations HAVE those resources (check "other_nations" resources)
-- Only propose to nations that can fulfill your request
-- {strategy_note}
+STRATEGY - STEP BY STEP:
+1. What do I need? (Check era requirements vs your current resources)
+2. Do I have GOLD? If YES → You can BUY resources! Look for nations that HAVE what you need
+3. Do I have extra resources? If YES → You can SELL them for GOLD to nations that HAVE GOLD
+4. Find the right trading partner (check "other_nations"):
+   - If BUYING: Find who HAS the resources you need
+   - If SELLING: Find who HAS enough GOLD to pay you
+5. {strategy_note}
 
-⚠️ BEFORE RESPONDING, COMPLETE THIS VERIFICATION CHECKLIST:
+IMPORTANT: If you have GOLD and need resources, you should BUY (offer GOLD, request resources)!
+Don't skip trading just because others don't have GOLD - you can use YOUR gold to buy FROM them!
+
+BEFORE RESPONDING, COMPLETE THIS VERIFICATION CHECKLIST:
 
 Step 1: What do I need? (Check your resources vs era requirements)
-Step 2: Who has what I need? (Check "other_nations" resources carefully)
-Step 3: Can they afford my request? (If I'm buying, do they have resources? If I'm selling, do they have gold?)
-Step 4: Is this trade valid? (One side gold only, other side resources only)
+Step 2: Do I HAVE what I want to offer? (Check YOUR OWN resources - if offering GOLD, do you have GOLD? If offering WOOD, do you have WOOD?)
+Step 3: Who has what I need? (Check "other_nations" resources carefully)
+Step 4: Can they afford my request? (If I'm buying, do they have resources? If I'm selling, do they have gold?)
+Step 5: Is this trade valid? (One side gold only, other side resources only)
 
-⚠️ CRITICAL: Your JSON response MUST match your reasoning!
+CRITICAL: Your JSON response MUST match your reasoning!
+- If your reasoning says "Therefore, I will skip trading", then trade MUST be false
 - If your reasoning says "trade is invalid", then trade MUST be false
-- If your reasoning says "I will skip trading", then trade MUST be false
-- If your reasoning says "I will trade with X", then trade MUST be true and target_nation_id MUST be X
+- If your reasoning says "I cannot sell/buy", then trade MUST be false
+- If your reasoning says "Therefore, I will trade with X", then trade MUST be true and target_nation_id MUST be X
 - DO NOT write one thing in reasoning and different thing in JSON!
+
+WHEN TO SKIP (trade: false):
+- No nation has what you're requesting (if buying)
+- No nation has GOLD to pay you (if selling)
+- You don't have what you want to offer
+- You don't have a good strategic reason to trade right now
+- You want to save your trades for later in the game
+
+Skipping is a VALID strategic choice! Don't force a bad trade just because you're afraid to skip.
 
 Respond with JSON:
 {{
@@ -315,21 +343,25 @@ Respond with JSON:
     "reasoning": "Target nation [NAME] has [X GOLD / Y WOOD, Z STONE]. [Explanation]. Therefore, I will [trade/skip]."
 }}
 
-⚠️ Your reasoning MUST:
-1. Start by stating what the target nation HAS
-2. End with "Therefore, I will trade with [NAME]" or "Therefore, I will skip trading"
+Your reasoning MUST:
+1. Start by stating what YOU have (your own resources)
+2. State what the target nation HAS
+3. End with "Therefore, I will trade with [NAME]" or "Therefore, I will skip trading"
+4. Have maximum of 150 characters
 
 Examples of GOOD reasoning:
-- "Norway has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings. Therefore, I will trade with Norway."
-- "Egypt has 80 WOOD and 60 STONE. I'll buy 50 WOOD with 100 GOLD to advance era. Therefore, I will trade with Egypt."
-- "Norway has 0 GOLD, so I cannot sell resources to them. Therefore, I will skip trading."
+- "I have 50 WOOD. Norway has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings. Therefore, I will trade with Norway."
+- "I have 100 GOLD. Egypt has 80 WOOD and 60 STONE. I'll buy 50 WOOD with 100 GOLD to advance era. Therefore, I will trade with Egypt."
+- "I have 0 GOLD. Norway has 200 GOLD. I cannot buy from anyone without GOLD. Therefore, I will skip trading."
+- "I have 50 WOOD but 0 GOLD. Egypt has 0 GOLD. I cannot sell to Egypt because they have no GOLD to pay me. Therefore, I will skip trading."
 
 Examples of BAD reasoning (NEVER do this):
 - "Egypt has wood but no gold, so I'll sell stone for gold" ← WRONG! They have no gold!
-- "I need resources so I'll trade" ← Didn't verify target has what I want!
+- "I need resources so I'll trade" ← Didn't verify YOU have what you're offering!
+- "I'll offer 100 GOLD to buy WOOD" when you have 0 GOLD ← WRONG! You don't have GOLD!
 - Reasoning says "invalid" but JSON has trade: true ← WRONG! Must match!
 
-If you don't want to trade, set trade: false and leave other fields null/empty."""
+NOTE: Setting trade: false ends your trading phase and moves you to the build phase."""
 
     return prompt
 
@@ -382,7 +414,7 @@ STRATEGY:
 - Do you have enough resources for it?
 - Will this generator produce resources you need?
 
-⚠️ CRITICAL: Your JSON response MUST match your reasoning!
+CRITICAL: Your JSON response MUST match your reasoning!
 - If your reasoning says "build FARM", then generator_type MUST be "FARM"
 - If your reasoning says "cannot afford", then build MUST be false
 - DO NOT write one thing in reasoning and different thing in JSON!
@@ -395,7 +427,9 @@ Respond with JSON:
     "reasoning": "Brief explanation ending with: 'Therefore, I will build [GENERATOR_NAME]' or 'Therefore, I will skip building'"
 }}
 
-⚠️ Your reasoning MUST end with explicitly stating your choice!
+Your reasoning MUST end with explicitly stating your choice!
+Also:
+- Reasoning should be under 150 characters
 
 Examples:
 - "I need GOLD for era advancement. I can afford FARM with 40 STONE. Therefore, I will build FARM."
@@ -403,108 +437,6 @@ Examples:
 
 If you don't want to build (or can't afford anything), set build: false.
 If you want to build, set build: true and specify the generator_type matching your reasoning."""
-
-    return prompt
-
-
-def create_combined_turn_decision_prompt(
-    nation: Nation,
-    game_state: Dict[str, Any],
-    era_requirements: Dict[str, int],
-) -> str:
-    """Create prompt for deciding all actions for a turn at once."""
-
-    # Build concise game state summary
-    other_nations = []
-    for other in game_state.get("nations", []):
-        if other["id"] != nation.id:
-            relationship = nation.get_relationship(other["id"])
-            other_nations.append({
-                "id": other["id"],
-                "name": other["name"],
-                "era": other["era"],
-                "resources": other["resources"],
-                "relationship": relationship,
-            })
-
-    # Recent transactions
-    recent_trades = game_state.get("recent_transactions", [])[:5]  # Last 5 only
-
-    prompt_data = {
-        "your_nation": {
-            "name": nation.name,
-            "era": nation.era.value,
-            "resources": nation.inventory.to_dict(),
-            "generators": [
-                {"type": g.generator_type.value, "produces": g.produces.value}
-                for g in nation.generators
-            ],
-        },
-        "goal": {
-            "next_era_requirements": era_requirements,
-            "current_era": nation.era.value,
-        },
-        "other_nations": other_nations,
-        "recent_trades": recent_trades,
-        "generator_costs": game_state.get("generator_costs", {}),
-    }
-
-    prompt = f"""Analyze the game state and plan ALL your actions for this turn.
-
-GAME STATE:
-{json.dumps(prompt_data, indent=2)}
-
-You can take 0-2 actions this turn. Plan your complete turn strategy:
-1. TRADE: Propose one trade to another nation (optional)
-2. BUILD: Build one generator (optional)
-
-Consider:
-- What resources do you need for the next era?
-- Should you trade first to get resources, then build?
-- Which generators would help you most?
-- Which nations have resources you need and might accept your offer?
-
-TRADING RULES:
-- To BUY: Offer ONLY GOLD, request resources (no gold)
-- To SELL: Offer resources (no gold), request ONLY GOLD
-- Check if you/target have the resources needed for the trade
-- If the trade is rejected, you may try one more time later, with a different (or same) trade and with a different nation
-
-Respond with JSON containing your full turn plan:
-{{
-    "actions": [
-        {{
-            "type": "TRADE",
-            "reasoning": "why you're making this trade",
-            "target_nation_id": 0,
-            "offering": {{"GOLD": 100}},
-            "requesting": {{"WOOD": 50, "STONE": 30}}
-        }},
-        {{
-            "type": "BUILD",
-            "reasoning": "why you're building this",
-            "generator_type": "MINE"
-        }},
-        {{
-            "type": "BUILD",
-            "reasoning": "building Farm with wood",
-            "generator_type": "FARM",
-            "payment_resource": "WOOD"
-        }}
-    ]
-}}
-
-RULES:
-- actions array can be empty [] if you choose to pass
-- Maximum 2 actions total: 1 TRADE and/or 1 BUILD (0-2 actions)
-- Each reasoning should be under 150 characters
-- Order doesn't matter (we execute TRADE before BUILD)
-- Check generator_costs for exact prices
-- One side of trade must be ONLY GOLD, other side NO GOLD
-- IMPORTANT: Before proposing a trade, verify the target nation HAS the resources you're requesting
-- When building a FARM, you MUST specify payment_resource (WOOD or STONE) since Farm can be built with either of those resources
-
-Plan your turn to advance toward the next era!"""
 
     return prompt
 
@@ -556,6 +488,8 @@ REMEMBER: All trades must follow the gold-only rule:
 - One side must be ONLY GOLD
 - The other side must have NO GOLD
 
+Also:
+- Reasoning should be under 150 characters
 Respond with JSON:
 {{
     "decision": "ACCEPT" | "COUNTER" | "REJECT",
@@ -601,7 +535,8 @@ They offer: {counter_offer.get('offering', {})}
 They request: {counter_offer.get('requesting', {})}
 
 Decide whether to accept or reject this counter-offer.
-
+Also:
+- Reasoning should be under 150 characters
 Respond with JSON:
 {{
     "decision": "ACCEPT" | "REJECT",
@@ -647,12 +582,14 @@ GAME STATE:
 
 You can attempt the SAME trade (same offering/requesting) with a DIFFERENT partner, OR try a DIFFERENT trade with a DIFFERENT partner, OR skip trading entirely.
 
+NOTE: If you set retry: false, your trading phase ends and you move to the build phase.
+
 IMPORTANT RULES:
 1. You can only retry with a nation that HAS the resources you're requesting
 2. One side must be ONLY GOLD, other side NO GOLD
 3. Choose wisely - consider relationships and strategic value
 4. If no good alternative exists, set retry: false
-5. This is your last chance to trade. If it is rejected, you may not try trading again this turn
+5. This is your last chance to trade this turn. If this retry is rejected, you may not try again
 
 Respond with JSON:
 {{

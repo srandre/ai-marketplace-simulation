@@ -199,8 +199,12 @@ class AsyncTurnExecutor:
                                         trade_summaries.append(f"retry rejected by {retry_target.name}")
                                     else:
                                         trade_summaries.append(f"retry {retry_result.lower()}")
-                                    
+
                                     trades_completed += 1
+                            else:
+                                # Nation decided not to retry - skip remaining trade opportunities
+                                trade_summaries.append(f"decides not to retry, trading phase ends")
+                                break  # Exit trading loop
                         else:
                             trade_summaries.append(f"trade {result.lower()}")
                     else:
