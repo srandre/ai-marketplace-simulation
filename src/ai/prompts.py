@@ -218,41 +218,49 @@ GAME STATE:
 {memory_context}
 {complement_note}
 
-RULES:
-1. Gold-only: One side ONLY gold, other side ONLY resources (no mixing)
-2. YOU must have what you offer - check "your_nation.resources" FIRST
-3. TARGET must have what you request - check "other_nations[X].resources" FIRST
-4. Don't repeat failed trades
+GOLD-ONLY TRADING RULES:
+- One side offers ONLY GOLD
+- Other side offers ONLY resources (can be multiple: WOOD, STONE, FOOD, etc.)
+- NEVER mix gold with resources on the same side
+- Examples:
+  ✓ Offer GOLD → Request WOOD (BUY)
+  ✓ Offer GOLD → Request WOOD + STONE (BUY bundle)
+  ✓ Offer WOOD + STONE → Request GOLD (SELL bundle)
+  ✗ Offer GOLD + WOOD → anything (can't mix gold with resources)
+  ✗ Offer WOOD → Request STONE (one side MUST be GOLD)
 
-CRITICAL - READ THE ACTUAL NUMBERS:
-Example: Iran has {{"GOLD": 20}}
-- ✓ You CAN request 10 GOLD or 20 GOLD
-- ✗ You CANNOT request 30 GOLD - Iran only has 20!
-
-If you request MORE than target has, trade FAILS automatically.
+CRITICAL - TARGET NATIONS WITH GENERATORS:
+Check target nation's generators! They're MORE LIKELY to accept if they can regenerate.
+- Target has MINE? → Request GOLD from them (they'll regenerate it)
+- Target has LUMBER_CAMP? → Request WOOD from them (they'll regenerate it)
+- Target has QUARRY? → Request STONE from them (they'll regenerate it)
+- Target has FARM? → Request FOOD from them (they'll regenerate it)
 
 STEP-BY-STEP:
-1. Check "your_nation.resources" - what do I have?
-2. Find nations in "other_nations" with what I need
-3. READ their "resources" numbers carefully
-4. Request ≤ what they actually have (not more!)
+1. What do I need? (check "goal.next_era_requirements")
+2. Do I have GOLD to buy, or resources to sell for GOLD?
+3. Who has what I need AND generators for it?
+4. Check "your_nation.resources" - do YOU have what you offer?
+5. Check target's "resources" - do THEY have what you request?
 
 Respond with JSON (keep reasoning ≤3 sentences):
 {{
     "trade": true/false,
     "target_nation_id": <id or null>,
-    "offering": {{"GOLD": 100}} or {{"WOOD": 50, "STONE": 30}},
-    "requesting": {{"WOOD": 50}} or {{"GOLD": 100}},
-    "reasoning": "I have X. [Name] has Y. Trading/Skipping."
+    "offering": {{"GOLD": 50}} or {{"WOOD": 50, "STONE": 30}},
+    "requesting": {{"WOOD": 50}} or {{"GOLD": 50}},
+    "reasoning": "I need X. [Name] has Y and [GENERATOR]. Buying/Selling/Skipping."
 }}
 
 GOOD examples:
-- "I have 50 FOOD and FARM. Iran has 20 GOLD. Selling 20 FOOD for 20 GOLD."
-- "I have 0 GOLD. Can't buy. Skipping."
+- {{"trade": true, "offering": {{"GOLD": 100}}, "requesting": {{"WOOD": 50, "STONE": 50}}, "reasoning": "I need WOOD and STONE. USA has both and generators. Buying for 100 GOLD."}}
+- {{"trade": true, "offering": {{"FOOD": 30, "WOOD": 20}}, "requesting": {{"GOLD": 50}}, "reasoning": "I need GOLD. Iran has 60 GOLD and MINE. Selling for 50 GOLD."}}
+- {{"trade": false, "target_nation_id": null, "offering": {{}}, "requesting": {{}}, "reasoning": "I have 0 GOLD and nothing to sell. Skipping."}}
 
 BAD examples:
-- Requesting 30 when target only has 20 (check numbers!)
-- Offering more than you have"""
+- {{"offering": {{"GOLD": 50, "WOOD": 30}}, ...}} ← WRONG! Can't mix gold with resources
+- {{"offering": {{"GOLD": 50}}, "requesting": {{"GOLD": 50}}}} ← WRONG! Can't trade gold for gold
+- {{"offering": {{"WOOD": 50}}, "requesting": {{"STONE": 30}}}} ← WRONG! One side MUST be GOLD"""
 
     return prompt
 
@@ -374,82 +382,39 @@ They request: {offer.get('requesting', {})}
 RULES:
 - You MUST have what they request (check "your_nation.resources")
 - If you lack ANY requested resource → REJECT
-- If you have generators for requested resources, consider ACCEPT (you'll regenerate)
-- COUNTER if trade is unfair but workable
+- Resources are ALWAYS useful (for future eras, generators, other trades)
 
-BEFORE DECIDING:
-1. Do I have what they request? (if NO → REJECT)
-2. Do I need what they offer?
-3. Is this fair value?
-4. Relationship: {relationship} (consider this)
+CRITICAL - WHEN TO ACCEPT:
+Check YOUR generators (in "your_nation.generators"):
+- MINE produces GOLD
+- LUMBER_CAMP produces WOOD
+- QUARRY produces STONE
+- FARM produces FOOD
 
-Respond with JSON (keep reasoning ≤3 sentences):
-{{
-    "decision": "ACCEPT" | "COUNTER" | "REJECT",
-    "reasoning": "What they request, what I have, decision.",
-    "counter_offer": {{
-        "offering": {{"WOOD": 30}},
-        "requesting": {{"GOLD": 50}}
-    }} (only if COUNTER, else null)
-}}
+ACCEPT if you have a generator for what they request!
+- They want GOLD and you have MINE? → ACCEPT (you'll regenerate GOLD next turn)
+- They want WOOD and you have LUMBER_CAMP? → ACCEPT (you'll regenerate WOOD next turn)
+- They want STONE and you have QUARRY? → ACCEPT (you'll regenerate STONE next turn)
+- They want FOOD and you have FARM? → ACCEPT (you'll regenerate FOOD next turn)
 
-GOOD examples:
-- "They request 100 GOLD. I have 150 GOLD, need WOOD. Accepting."
-- "They request 50 WOOD. I have 30 WOOD. Cannot fulfill. Rejecting."
-- "They request 80 STONE. I have 80 but price too high. Countering 50 STONE for 50 GOLD."
-
-BAD examples:
-- Not checking if you have what they request
-- Long rambling reasoning (keep it ≤3 sentences!)"""
-
-    return prompt
-
-
-def create_counter_offer_response_prompt(
-    nation: Nation,
-    responder_nation: Dict[str, Any],
-    counter_offer: Dict[str, Any],
-) -> str:
-    """Create prompt for responding to a counter-offer."""
-
-    relationship = nation.get_relationship(responder_nation["id"])
-
-    prompt_data = {
-        "your_nation": {
-            "name": nation.name,
-            "resources": nation.inventory.to_dict(),
-        },
-        "responder": {
-            "name": responder_nation["name"],
-            "relationship": relationship,
-        },
-        "counter_offer": counter_offer,
-    }
-
-    prompt = f"""COUNTER-OFFER RECEIVED
-
-{json.dumps(prompt_data, indent=2)}
-
-They offer: {counter_offer.get('offering', {})}
-They request: {counter_offer.get('requesting', {})}
-
-RULES:
-- You MUST have what they request (check "your_nation.resources")
-- If you lack resources → REJECT
-- Accept if fair and beneficial
+Only REJECT if:
+- You don't have what they request, OR
+- You don't have a generator for it (you won't get it back)
 
 Respond with JSON (keep reasoning ≤2 sentences):
 {{
     "decision": "ACCEPT" | "REJECT",
-    "reasoning": "What they request, what I have, decision."
+    "reasoning": "They request X. I have [amount] and [GENERATOR]. Accepting/Rejecting."
 }}
 
-GOOD examples:
-- "They request 80 GOLD. I have 120 GOLD, need WOOD. Accepting."
-- "They request 50 WOOD. I have 30. Cannot fulfill. Rejecting."
+GOOD examples (notice they always mention their generator!):
+- "They request 50 GOLD. I have 50 GOLD and MINE. Accepting."
+- "They request 50 WOOD. I have 50 WOOD but no LUMBER_CAMP. Rejecting."
+- "They request 80 STONE. I have 100 STONE and QUARRY. Accepting."
 
-BAD example:
-- Not verifying you have what they request"""
+BAD examples:
+- "I need WOOD for advancement, rejecting" (WRONG - if you have LUMBER_CAMP, accept!)
+- Not mentioning your generators in reasoning"""
 
     return prompt
 
@@ -493,28 +458,31 @@ CRITICAL: Check "resources" field, NOT "generators" field!
 - Generators produce NEXT turn, not now
 - If nation has LUMBER_CAMP but resources.WOOD = 0 → they have NO WOOD now!
 
+GOLD-ONLY TRADING RULES:
+- One side ONLY GOLD, other side ONLY resources (can be multiple)
+- NEVER mix gold with resources on same side
+- Examples: ✓ GOLD for WOOD+STONE  ✓ WOOD+STONE for GOLD  ✗ GOLD+WOOD for anything
+
 RULES:
 - Verify YOU still have what you're offering
 - Verify ALTERNATIVE nation has what you're requesting (check their "resources")
-- Gold-only rule: one side ONLY gold, other side NO gold
 - If no good alternative → set retry: false
 
 Respond with JSON (keep reasoning ≤3 sentences):
 {{
     "retry": true/false,
     "target_nation_id": <id or null>,
-    "offering": {{"GOLD": 100}} or {{"WOOD": 50}} (required if retry: true),
-    "requesting": {{"WOOD": 50}} or {{"GOLD": 100}} (required if retry: true),
+    "offering": {{"GOLD": 50}} or {{"WOOD": 50, "STONE": 30}},
+    "requesting": {{"WOOD": 50}} or {{"GOLD": 50}},
     "reasoning": "What I have, what they have, decision."
 }}
 
 GOOD examples:
-- {{"retry": true, "target_nation_id": 2, "offering": {{"GOLD": 100}}, "requesting": {{"WOOD": 60}}, "reasoning": "I have 100 GOLD. USA has 80 WOOD. Retrying with USA."}}
+- {{"retry": true, "target_nation_id": 2, "offering": {{"GOLD": 100}}, "requesting": {{"WOOD": 60, "STONE": 40}}, "reasoning": "I have 100 GOLD. USA has both. Retrying."}}
 - {{"retry": false, "target_nation_id": null, "offering": {{}}, "requesting": {{}}, "reasoning": "No nation has what I need. Skipping."}}
 
 BAD examples:
-- Long rambling reasoning (keep it ≤3 sentences!)
-- Missing offering/requesting when retry: true
-- Not verifying alternative has resources"""
+- {{"offering": {{"GOLD": 50, "WOOD": 30}}, ...}} ← WRONG! Can't mix gold with resources
+- {{"offering": {{"WOOD": 50}}, "requesting": {{"STONE": 30}}}} ← WRONG! One side MUST be GOLD"""
 
     return prompt

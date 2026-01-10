@@ -1,6 +1,6 @@
 """Transaction models for resource trading."""
 
-from typing import Dict, Optional
+from typing import Dict
 
 from pydantic import BaseModel, Field
 
@@ -74,7 +74,6 @@ class Transaction(BaseModel):
     initiator_id: int
     responder_id: int
     current_offer: TradeOffer
-    counter_offer: Optional[TradeOffer] = None
     status: TransactionStatus = Field(default=TransactionStatus.PROPOSED)
     turn_number: int
 
@@ -86,20 +85,9 @@ class Transaction(BaseModel):
         """Mark transaction as rejected."""
         self.status = TransactionStatus.REJECTED
 
-    def counter_propose(self, counter_offer: TradeOffer) -> None:
-        """Submit a counter offer."""
-        self.counter_offer = counter_offer
-        self.status = TransactionStatus.COUNTER_PROPOSED
-
     def complete(self) -> None:
         """Mark transaction as completed."""
         self.status = TransactionStatus.COMPLETED
-
-    def get_active_offer(self) -> TradeOffer:
-        """Get the currently active offer."""
-        if self.status == TransactionStatus.COUNTER_PROPOSED and self.counter_offer:
-            return self.counter_offer
-        return self.current_offer
 
     class Config:
         """Pydantic configuration."""

@@ -63,22 +63,14 @@ class TradingManager:
         if not initiator or not responder:
             return False, "Nations not found"
 
-        # Get the active offer
-        active_offer = transaction.get_active_offer()
+        # Get the active offer (always the original offer now)
+        active_offer = transaction.current_offer
 
-        # Determine who gives and receives what based on transaction state
-        if transaction.status == TransactionStatus.COUNTER_PROPOSED:
-            # Counter-offer: responder is now offering, initiator receives
-            giver = responder
-            receiver = initiator
-            giving = active_offer.offering
-            receiving = active_offer.requesting
-        else:
-            # Original offer: initiator offers, responder receives
-            giver = initiator
-            receiver = responder
-            giving = active_offer.offering
-            receiving = active_offer.requesting
+        # Initiator offers, responder receives
+        giver = initiator
+        receiver = responder
+        giving = active_offer.offering
+        receiving = active_offer.requesting
 
         # Verify resources
         if not giver.inventory.has_multiple(giving):
@@ -159,39 +151,3 @@ class TradingManager:
 
         # Note: Trade rejection is now shown in the AI decision log
         # No separate log entry needed here
-
-    def counter_propose(
-        self, transaction: Transaction, counter_offer: TradeOffer
-    ) -> tuple[bool, str]:
-        """
-        Make a counter-proposal to a trade.
-
-        Returns (success, message).
-        """
-        responder = self.game_state.get_nation(transaction.responder_id)
-
-        if not responder:
-            return False, "Responder nation not found"
-
-        if not counter_offer.is_valid():
-            return False, "Invalid counter-offer: Trade must have one side with ONLY gold and the other side with NO gold"
-
-        # Check if responder has resources for counter-offer
-        if not responder.inventory.has_multiple(counter_offer.offering):
-            return False, "Insufficient resources for counter-offer"
-
-        transaction.counter_propose(counter_offer)
-
-        # Log the counter-proposal (simplified - details stored for later viewing)
-        initiator = self.game_state.get_nation(transaction.initiator_id)
-
-        self.game_state.game_log.add_entry(
-            log_type=LogType.TRADE_COUNTER,
-            turn_number=self.game_state.turn_number,
-            round_number=self.game_state.round_number,
-            summary=f"{responder.name} counters {initiator.name}",
-            nations_involved=[transaction.initiator_id, transaction.responder_id],
-            details={"counter_offer": counter_offer.to_dict()},
-        )
-
-        return True, "Counter-proposal submitted"

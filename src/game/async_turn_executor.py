@@ -194,13 +194,12 @@ class AsyncTurnExecutor:
                                     retry_result = self.controller._execute_trade_action(current_nation, retry_trade)
 
                                     if retry_result == "ACCEPTED":
+                                        trades_completed += 1
                                         trade_summaries.append(f"then traded with {retry_target.name}")
                                     elif retry_result == "REJECTED":
                                         trade_summaries.append(f"retry rejected by {retry_target.name}")
                                     else:
                                         trade_summaries.append(f"retry {retry_result.lower()}")
-
-                                    trades_completed += 1
                             else:
                                 # Nation decided not to retry - skip remaining trade opportunities
                                 trade_summaries.append(f"decides not to retry, trading phase ends")

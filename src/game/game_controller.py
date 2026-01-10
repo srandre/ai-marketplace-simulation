@@ -114,8 +114,6 @@ class GameController:
         # Create clearer log message based on decision
         if response_type == "ACCEPT":
             log_summary = f"{responder.name} accepts trade from {initiator.name}"
-        elif response_type == "COUNTER" or response_type == 'ACUNTER':
-            log_summary = f"{responder.name} counters trade from {initiator.name}"
         else:
             log_summary = f"{responder.name} rejects trade from {initiator.name}"
 
@@ -137,57 +135,15 @@ class GameController:
         if response_type == "ACCEPT":
             self.trading_manager.accept_trade(transaction)
             return "ACCEPTED"
-        elif response_type == "COUNTER" or response_type == 'ACUNTER':
-            counter_offer_data = decision.get("counter_offer", {})
-            counter_offer = self.decision_maker.parse_trade_offer(counter_offer_data)
-            if counter_offer and counter_offer.is_valid():
-                success, _ = self.trading_manager.counter_propose(transaction, counter_offer)
-                if success:
-                    # Ask initiator about counter-offer
-                    self._process_counter_offer_response(transaction)
-            return "COUNTER"
         else:  # REJECT
             self.trading_manager.reject_trade(transaction)
             return "REJECTED"
-
-    def _process_counter_offer_response(self, transaction: Transaction) -> None:
-        """Process initiator's response to a counter-offer."""
-        initiator = self.game_state.get_nation(transaction.initiator_id)
-        responder = self.game_state.get_nation(transaction.responder_id)
-
-        if not initiator or not responder:
-            return
-
-        # Ask AI for response
-        decision, prompt, response = self.decision_maker.respond_to_counter_offer(
-            initiator,
-            responder.to_summary_dict(),
-            transaction.counter_offer.to_dict() if transaction.counter_offer else {},
-        )
-
-        # Log AI decision
-        log_entry = self.game_state.game_log.add_entry(
-            log_type=LogType.AI_DECISION,
-            turn_number=self.game_state.turn_number,
-            round_number=self.game_state.round_number,
-            summary=f"{initiator.name} responding to counter-offer",
-            nations_involved=[initiator.id],
-            details={"action_type": "COUNTER_RESPONSE"},
-        )
-        log_entry.add_ai_decision(initiator.id, prompt, response)
-
-        # Process response
-        if decision.get("decision") == "ACCEPT":
-            self.trading_manager.accept_trade(transaction)
-        else:
-            self.trading_manager.reject_trade(transaction)
-
 
     def _execute_trade_action(self, nation, action: Dict) -> str:
         """
         Execute a trade action from the combined turn plan.
 
-        Returns: "ACCEPTED", "REJECTED", "COUNTER", or "INVALID"
+        Returns: "ACCEPTED", "REJECTED", or "INVALID"
         """
         target_id = action.get("target_nation_id")
         if target_id is None:

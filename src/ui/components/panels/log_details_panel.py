@@ -78,7 +78,6 @@ class LogDetailsPanel(ScrollablePanel):
         has_content = (
             'trade_offers' in log.details or
             'offer' in log.details or
-            'counter_offer' in log.details or
             'generated' in log.details or
             'failure_reason' in log.details
         )
@@ -109,12 +108,6 @@ class LogDetailsPanel(ScrollablePanel):
 
         if 'offer' in log.details:
             y = self._draw_trade_offer_details(screen, log.details['offer'], x + 10, y, clip_rect)
-        elif 'counter_offer' in log.details:
-            text_surf = self.font_small.render("Counter-offer:", True, colors.TEXT_SECONDARY)
-            if y >= clip_rect.top and y < clip_rect.bottom:
-                screen.blit(text_surf, (x + 10, y))
-            y += self.small_line_height
-            y = self._draw_trade_offer_details(screen, log.details['counter_offer'], x + 20, y, clip_rect)
         elif 'generated' in log.details:
             gen_dict = log.details['generated']
             gen_text = format_resources_dict(gen_dict)

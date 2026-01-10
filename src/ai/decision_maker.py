@@ -8,7 +8,6 @@ from ..models.transaction import TradeOffer
 from .deepseek_client import DeepSeekClient
 from .prompts import (
     create_build_phase_prompt,
-    create_counter_offer_response_prompt,
     create_system_prompt,
     create_trade_response_prompt,
     create_trading_phase_prompt,
@@ -117,32 +116,6 @@ class DecisionMaker:
         default_decision = {
             "decision": "REJECT",
             "reasoning": "Unable to process offer",
-        }
-
-        decision, raw_response = self.client.make_decision_with_fallback(
-            self.system_prompt, user_prompt, default_decision
-        )
-
-        return decision, user_prompt, raw_response
-
-    def respond_to_counter_offer(
-        self,
-        nation: Nation,
-        responder_nation: Dict[str, Any],
-        counter_offer: Dict[str, Any],
-    ) -> tuple[Dict[str, Any], str, str]:
-        """
-        Decide whether to accept a counter-offer.
-
-        Returns (decision_dict, user_prompt, ai_response).
-        """
-        user_prompt = create_counter_offer_response_prompt(
-            nation, responder_nation, counter_offer
-        )
-
-        default_decision = {
-            "decision": "REJECT",
-            "reasoning": "Unable to process counter-offer",
         }
 
         decision, raw_response = self.client.make_decision_with_fallback(
