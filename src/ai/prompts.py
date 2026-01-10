@@ -310,6 +310,55 @@ STRATEGY - STEP BY STEP:
 IMPORTANT: If you have GOLD and need resources, you should BUY (offer GOLD, request resources)!
 Don't skip trading just because others don't have GOLD - you can use YOUR gold to buy FROM them!
 
+MARKET DYNAMICS - SUPPLY AND DEMAND:
+
+1. CHOOSING THE BEST TRADING PARTNER:
+   When multiple nations have what you need, prefer nations with MORE of that resource:
+   - If buying WOOD: Nation with 200 WOOD is better than nation with 80 WOOD (more supply = more likely to accept)
+   - If selling for GOLD: Nation with 300 GOLD is better than nation with 100 GOLD (more buying power)
+   - Nations with abundant resources are more likely to trade and can handle larger deals
+
+2. PRICING BASED ON YOUR SCARCITY (ERA-RELATIVE):
+   Adjust your offers based on how desperate you are RELATIVE TO YOUR ERA:
+
+   First, check your era advancement requirements to understand what's "a lot" vs "scarce" in YOUR era:
+   - Era 0 (Origin): Requirements are ~50 per resource
+   - Era 1 (Industry): Requirements are ~500 per resource
+   - Era 2 (Information): Requirements are ~5000-20000 per resource
+   - Era 3 (Domination): Requirements are ~50000 per resource
+
+   ABUNDANT = You have 4x+ your era advancement requirement
+   COMFORTABLE = You have 2-4x your era advancement requirement
+   LIMITED = You have 1-2x your era advancement requirement
+   SCARCE = You have less than your era advancement requirement
+
+   If you're BUYING and you have ABUNDANT GOLD (4x+ era requirement):
+   - You can afford to pay MORE to ensure acceptance
+   - Example Era 1: You have 2000 GOLD (4x of 500) → offer generous prices like 150 GOLD for 80 WOOD
+   - Being generous increases your chance of acceptance
+
+   If you're BUYING and you have LIMITED/SCARCE GOLD (1-2x era requirement):
+   - Try to get fair deals, don't overpay
+   - Example Era 1: You have 600 GOLD (barely above 500) → offer conservative prices like 90 GOLD for 80 WOOD
+
+   If you're SELLING and you have EXCESS resources (3x+ era requirement):
+   - You can offer MORE generous amounts to get GOLD quickly
+   - Example Era 2: You have 18000 WOOD (3x of 6000) → sell 1000 WOOD for 1200 GOLD (generous amount)
+   - Moving excess resources for gold is strategic
+
+   If you're SELLING and you have LIMITED/SCARCE resources (less than 2x era requirement):
+   - Ask for MORE GOLD per resource, don't undersell
+   - Example Era 2: You have 7000 STONE (barely above 6000) → sell 400 STONE for 1000 GOLD (premium price)
+
+   But remember: you can adjust these based on YOUR scarcity and THEIR abundance!
+
+4. EXAMPLES OF MARKET-AWARE TRADING (ERA-RELATIVE):
+   ✓ GOOD (Era 0): "I have 250 GOLD (5x of 50 requirement = abundant). USA has 180 WOOD. I'll offer 120 GOLD for 60 WOOD (generous) to ensure acceptance."
+   ✓ GOOD (Era 1): "I have 400 WOOD (below 500 requirement = scarce). Japan has 2500 GOLD (5x of 500 = abundant). I'll sell 80 WOOD for 250 GOLD (premium price) since I'm near my advancement threshold."
+   ✓ GOOD (Era 2): "I have 18000 STONE (3x of 6000 requirement = excess). Turkey has 8000 GOLD. I'll sell 2500 STONE for 3000 GOLD (generous amount) to convert excess."
+   ✗ BAD (Era 1): "I have 550 GOLD (barely above 500 requirement = limited). I'll offer 500 GOLD for resources" ← spending almost all your gold when you're close to advancement threshold is risky!
+   ✗ BAD (Era 0): "I have 35 WOOD (below 50 requirement = scarce). I'll sell 30 WOOD for 40 GOLD" ← undervaluing scarce resources when you need them for advancement!
+
 BEFORE RESPONDING, COMPLETE THIS VERIFICATION CHECKLIST:
 
 Step 1: What do I need? (Check your resources vs era requirements)
@@ -544,6 +593,61 @@ REMEMBER: All trades must follow the gold-only rule:
 - One side must be ONLY GOLD
 - The other side must have NO GOLD
 
+MARKET DYNAMICS - EVALUATING OFFERS (ERA-RELATIVE):
+
+1. ASSESS YOUR SCARCITY RELATIVE TO YOUR ERA:
+   Before deciding, check if you're ABUNDANT or SCARCE in what they're requesting:
+
+   Compare what they want to YOUR era advancement requirements:
+   - ABUNDANT = You have 4x+ your era requirement for that resource
+   - COMFORTABLE = You have 2-4x your era requirement
+   - LIMITED = You have 1-2x your era requirement
+   - SCARCE = You have less than your era requirement
+
+   If they want GOLD and you have ABUNDANT GOLD (4x+ era requirement):
+   - You can afford to be generous, consider ACCEPTING even if slightly unfavorable
+   - Example Era 1: They want 200 GOLD for 120 WOOD, you have 2500 GOLD (5x of 500) → ACCEPT (you have plenty)
+
+   If they want GOLD and you have LIMITED/SCARCE GOLD (less than 2x era requirement):
+   - Be more selective, demand better rates
+   - Example Era 1: They want 300 GOLD for 180 WOOD, you have 650 GOLD (1.3x of 500) → COUNTER for 200 GOLD or REJECT
+
+   If they want RESOURCES and you have ABUNDANT resources (4x+ era requirement):
+   - You can afford to sell generously
+   - Example Era 2: They want 1500 WOOD, you have 25000 WOOD (4x+ of 6000) → ACCEPT
+
+   If they want RESOURCES and you have LIMITED/SCARCE resources (less than 2x era requirement):
+   - Demand premium prices, don't undersell
+   - Example Era 0: They want 30 WOOD for 40 GOLD, you have 70 WOOD (1.4x of 50) → COUNTER for 20 WOOD or demand 60 GOLD
+
+2. ASSESS YOUR NEED:
+   Check if what they're offering is CRITICAL to your advancement:
+
+   If they're offering resources you DESPERATELY need (to advance era):
+   - Be willing to pay premium or accept less favorable terms
+   - Example: You need 30 WOOD for advancement, they offer 40 WOOD for 90 GOLD → ACCEPT (critical need)
+
+   If they're offering resources you DON'T urgently need:
+   - Demand better rates or REJECT
+   - Example: You need WOOD but they're offering STONE → REJECT or COUNTER
+
+3. FAIR VALUE REFERENCE (adjust based on scarcity):
+   - 1 WOOD ≈ 1.5-2 GOLD (baseline)
+   - 1 STONE ≈ 1.5-2 GOLD (baseline)
+   - 1 FOOD ≈ 1.5-2 GOLD (baseline)
+   - 1 TECHNOLOGY ≈ 2-3 GOLD (baseline)
+   - 1 INFORMATION ≈ 2-3 GOLD (baseline)
+
+   When YOU are abundant in what they want: Accept 1.2-1.5x rates (generous)
+   When YOU are scarce in what they want: Demand 2-2.5x rates (premium)
+
+4. EXAMPLES OF MARKET-AWARE RESPONSES (ERA-RELATIVE):
+   ✓ GOOD (Era 0): "They want 80 GOLD for 50 WOOD. I have 300 GOLD (6x of 50 = abundant) and need WOOD urgently. Fair deal. ACCEPT."
+   ✓ GOOD (Era 1): "They want 300 STONE for 400 GOLD. I have 750 STONE (1.5x of 500 = limited). This undervalues my limited supply. COUNTER for 200 STONE or 600 GOLD."
+   ✓ GOOD (Era 2): "They want 2000 GOLD for 1200 WOOD. I have 7000 GOLD (1.4x of 5000 = limited) and need to save for building. REJECT."
+   ✗ BAD (Era 0): "They want 50 WOOD for 60 GOLD. I have 200 WOOD (4x of 50 = abundant). REJECT." ← You're abundant, should accept or counter generously!
+   ✗ BAD (Era 1): "They want 400 GOLD for 250 STONE. I have 600 GOLD (1.2x of 500 = limited). ACCEPT." ← You're limited in GOLD, should counter down!
+
 Respond with JSON:
 {{
     "decision": "ACCEPT" | "COUNTER" | "REJECT",
@@ -606,6 +710,35 @@ CRITICAL VERIFICATION:
 - If they request {{"GOLD": 100}} and you have {{"GOLD": 50}} → YOU MUST REJECT!
 - If they request {{"WOOD": 50}} and you have {{"WOOD": 40}} → YOU MUST REJECT!
 - Always verify EVERY resource they're requesting against YOUR resources
+
+MARKET DYNAMICS - EVALUATING COUNTER-OFFERS (ERA-RELATIVE):
+
+Check if the counter-offer is better or worse based on YOUR scarcity RELATIVE TO YOUR ERA:
+
+Use these thresholds relative to your era advancement requirements:
+- ABUNDANT = 4x+ era requirement
+- COMFORTABLE = 2-4x era requirement
+- LIMITED = 1-2x era requirement
+- SCARCE = Less than era requirement
+
+If they're asking for LESS than your original offer:
+- This is better for you! Consider ACCEPTING if you can afford it
+- Example Era 1: You offered 300 GOLD, they counter asking for 220 GOLD → ACCEPT
+
+If they're asking for MORE than your original offer:
+- Check YOUR scarcity: Are you ABUNDANT in what they want?
+- If ABUNDANT (4x+ era requirement) → Consider ACCEPTING to close the deal
+- If LIMITED/SCARCE (less than 2x era requirement) → REJECT, you can't afford premium pricing
+
+If they're offering LESS than you requested:
+- Check if you DESPERATELY need what they're offering
+- If CRITICAL for era advancement → Consider ACCEPTING partial amount
+- If NOT urgent → REJECT and try another partner
+
+Examples (ERA-RELATIVE):
+✓ (Era 0): "They counter with 70 GOLD for 50 WOOD (I offered 90 GOLD). I have 250 GOLD (5x of 50 = abundant). Better deal. ACCEPT."
+✓ (Era 1): "They counter with 300 WOOD for 450 GOLD (I offered 350 GOLD). I have 650 GOLD (1.3x of 500 = limited). Can't afford premium. REJECT."
+✗ (Era 2): "They counter with 1500 GOLD for 800 WOOD (I offered 1800 GOLD). REJECT." ← They're asking LESS gold, this is BETTER for you!
 
 Decide whether to accept or reject this counter-offer.
 
@@ -685,6 +818,61 @@ IMPORTANT RULES:
 4. Choose wisely - consider relationships and strategic value
 5. If no good alternative exists, set retry: false
 6. You can propose different amounts or different resources than the rejected trade
+
+MARKET DYNAMICS - CHOOSING BETTER PARTNERS:
+
+Your trade was rejected. Use market dynamics to find a BETTER partner:
+
+1. CHOOSE PARTNERS WITH MORE SUPPLY:
+   Why was your trade rejected? Possibly because they didn't have enough or didn't want to trade.
+   Look for nations with MORE of what you need:
+
+   If you were BUYING resources:
+   - Original partner had 80 WOOD and rejected
+   - Look for nations with 150+ WOOD (more likely to accept)
+   - They have abundance, more willing to sell
+
+   If you were SELLING for GOLD:
+   - Original partner had 120 GOLD and rejected
+   - Look for nations with 250+ GOLD (more likely to buy)
+   - They have more buying power
+
+2. ADJUST YOUR OFFER TO BE MORE ATTRACTIVE (ERA-RELATIVE):
+   If your original offer was borderline, make it MORE generous for the new partner:
+
+   Use these thresholds relative to YOUR era advancement requirements:
+   - ABUNDANT = 4x+ era requirement
+   - COMFORTABLE = 2-4x era requirement
+   - LIMITED = 1-2x era requirement
+   - SCARCE = Less than era requirement
+
+   If you have ABUNDANT resources (4x+ era requirement of what you're offering):
+   - Increase the amount you're offering to sweeten the deal
+   - Example Era 1: You have 2500 WOOD (5x of 500). Originally offered 200 WOOD for 250 GOLD → Now offer 280 WOOD for 250 GOLD
+
+   If you have ABUNDANT GOLD (4x+ era requirement):
+   - Increase your offer to ensure acceptance
+   - Example Era 0: You have 250 GOLD (5x of 50). Originally offered 70 GOLD for 40 WOOD → Now offer 90 GOLD for 40 WOOD
+
+3. CONSIDER COMPLETELY DIFFERENT TRADES:
+   Maybe the market doesn't want what you're offering. Consider switching strategies:
+
+   If you were trying to SELL resources but got rejected:
+   - Maybe nobody wants to buy right now
+   - Try BUYING instead if you have GOLD
+   - Example: Switch from selling WOOD to buying STONE
+
+   If you were trying to BUY but got rejected:
+   - Maybe you need to get GOLD first
+   - Try SELLING excess resources for GOLD instead
+   - Example: Switch from buying WOOD to selling STONE for GOLD
+
+4. EXAMPLES OF MARKET-AWARE ALTERNATIVE TRADES (ERA-RELATIVE):
+   ✓ GOOD (Era 0): "Rejected by Turkey (90 WOOD). I have 250 GOLD (5x of 50 = abundant). USA has 200 WOOD (more supply). I'll offer 120 GOLD (more generous) for 60 WOOD."
+   ✓ GOOD (Era 1): "Rejected by Egypt (800 GOLD). I have 2200 STONE (4.4x of 500 = abundant). Japan has 2500 GOLD (5x of 500 = more buying power). I'll sell 350 STONE for 450 GOLD."
+   ✓ GOOD (Era 2): "Rejected by Norway. Nobody wants to buy WOOD. I have 7000 GOLD (1.4x of 5000 = limited). I'll switch strategy and BUY STONE from Thailand instead."
+   ✗ BAD (Era 1): "Rejected by partner with 800 WOOD. New partner has 550 WOOD (less supply). I'll try them." ← Choose partners with MORE resources!
+   ✗ BAD (Era 0): "I was rejected so I'll try the exact same offer with someone who has less." ← Be more generous or find better partners!
 
 Respond with JSON:
 {{
