@@ -164,7 +164,7 @@ ai:
   provider: "deepseek"
   model: "deepseek-chat"
   # API key is loaded from .env file (DEEPSEEK_API_KEY)
-  max_tokens: 500
+  max_tokens: 1500
   temperature: 0.1
   timeout_seconds: 30
 
