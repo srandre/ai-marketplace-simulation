@@ -15,8 +15,11 @@ class CurrentTurnPanel:
         self.font_small = font_small
         self.font_medium = font_medium
 
-    def draw_panel_background(self, screen: pygame.Surface, font: pygame.font.Font) -> None:
-        """Draw the panel background and title."""
+    def draw_panel_background(self, screen: pygame.Surface, font: pygame.font.Font, game_state: Any = None) -> None:
+        """Draw the panel background and title with updated round number."""
+        # Update panel title with current round number if game_state is provided
+        if game_state:
+            self.panel.title = f"Round {game_state.round_number}"
         self.panel.draw(screen, font)
 
     def draw_content(self, screen: pygame.Surface, game_state: Any,

@@ -471,7 +471,7 @@ class MainWindow:
 
         # Draw panel backgrounds
         self.nations_panel.draw_panel_background(self.screen, self.font_medium)
-        self.current_turn_panel.draw_panel_background(self.screen, self.font_medium)
+        self.current_turn_panel.draw_panel_background(self.screen, self.font_medium, self.controller.game_state)
         self.logs_panel.draw_panel_background(self.screen, self.font_medium)
 
         if self.details_panel:

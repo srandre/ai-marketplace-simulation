@@ -103,6 +103,13 @@ RESOURCE UNLOCKING BY ERA:
 ERA ADVANCEMENT (automatic at turn start when you have these resources):
 {advancement_text}
 
+CRITICAL - TO WIN THE GAME:
+- You MUST reach {final_era_name} (highest era)
+- Each era requires specific resources (see above)
+- You can ONLY get resources from generators or trading
+- Build the generators that produce what you need for the next era!
+- Example: Need INFORMATION? Build DATACENTER. Need TECHNOLOGY? Build FACTORY.
+
 GENERATORS (base costs - increase exponentially as more are built globally):
 {generators_text}
 
@@ -252,12 +259,11 @@ def _format_memory_context(nation) -> str:
 
 
 def _format_resources_natural(resources: Dict[str, int]) -> str:
-    """Format resources as natural language."""
+    """Format resources as natural language, showing all resources including zeros."""
     parts = []
     for res, amt in resources.items():
-        if amt > 0:
-            parts.append(f"{res}={amt}")
-    return ", ".join(parts) if parts else "None (all resources at 0)"
+        parts.append(f"{res}={amt}")
+    return ", ".join(parts) if parts else "No resources"
 
 
 def _format_nation_summary(nation_data: Dict[str, Any]) -> str:
@@ -266,16 +272,12 @@ def _format_nation_summary(nation_data: Dict[str, Any]) -> str:
     resources = nation_data["resources"]
     generators = nation_data.get("generators", [])
 
-    # List what they HAVE NOW (tradeable)
+    # List what they HAVE NOW (tradeable) - show all resources including zeros
     tradeable_now = []
     for res, amt in resources.items():
-        if amt > 0:
-            tradeable_now.append(f"{res}={amt}")
+        tradeable_now.append(f"{res}={amt}")
 
-    if not tradeable_now:
-        has_now = "NOTHING! Cannot trade with them!"
-    else:
-        has_now = ", ".join(tradeable_now)
+    has_now = ", ".join(tradeable_now) if tradeable_now else "No resources"
 
     # List generators and what they produce
     gen_parts = []
@@ -307,16 +309,12 @@ def create_trading_phase_prompt(
     # Your nation info - format like other nations for consistency
     your_res_dict = nation.inventory.to_dict()
 
-    # List what YOU have NOW (tradeable)
+    # List what YOU have NOW (tradeable) - show all resources including zeros
     your_tradeable = []
     for res, amt in your_res_dict.items():
-        if amt > 0:
-            your_tradeable.append(f"{res}={amt}")
+        your_tradeable.append(f"{res}={amt}")
 
-    if not your_tradeable:
-        your_has_now = "NOTHING! You cannot trade!"
-    else:
-        your_has_now = ", ".join(your_tradeable)
+    your_has_now = ", ".join(your_tradeable) if your_tradeable else "No resources"
 
     # List YOUR generators and what they produce
     your_gen_parts = []
@@ -411,7 +409,7 @@ STEP-BY-STEP DECISION PROCESS:
    - If I want to SELL for GOLD: Does target have GOLD > 0 in their resources?
 5. Only AFTER confirming they have the resource, check if they have the generator (bonus)
 
-Respond with JSON (keep reasoning ≤3 sentences):
+Respond with JSON (keep reasoning <=3 sentences):
 {{
     "trade": true/false,
     "target_nation_id": <id or null>,
@@ -508,7 +506,7 @@ STRATEGY:
 - Which generator produces what I need?
 - MINE produces GOLD (needed for all trades - prioritize if affordable)
 
-Respond with JSON (keep reasoning ≤2 sentences):
+Respond with JSON (keep reasoning <=2 sentences):
 {{
     "build": true/false,
     "generator_type": "LUMBER_CAMP" | "QUARRY" | "FARM" | "MINE" | "FACTORY" | "DATACENTER" | null,
@@ -592,7 +590,7 @@ Only REJECT if:
 - You don't have what they request, OR
 - You don't have a generator for it (you won't get it back)
 
-Respond with JSON (keep reasoning ≤2 sentences):
+Respond with JSON (keep reasoning <=2 sentences):
 {{
     "decision": "ACCEPT" | "REJECT",
     "reasoning": "They request X. I have [amount] and [GENERATOR]. Accepting/Rejecting." (this should ABSOLUTELY match what's answered in the other properties)
@@ -678,7 +676,7 @@ RULES:
 - Verify ALTERNATIVE nation has what you're requesting (check their "resources")
 - If no good alternative → set retry: false
 
-Respond with JSON (keep reasoning ≤3 sentences):
+Respond with JSON (keep reasoning <=3 sentences):
 {{
     "retry": true/false,
     "target_nation_id": <id or null>,
