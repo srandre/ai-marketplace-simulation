@@ -18,6 +18,9 @@ class DeepSeekClient:
         self.max_tokens = config.get("ai.max_tokens", 500)
         self.temperature = config.get("ai.temperature", 0.7)
         self.timeout = config.get("ai.timeout_seconds", 30)
+        self.top_p = config.get("ai.top_p", None)
+        self.frequency_penalty = config.get("ai.frequency_penalty", None)
+        self.presence_penalty = config.get("ai.presence_penalty", None)
 
     def make_decision(
         self, system_prompt: str, user_prompt: str
@@ -42,6 +45,14 @@ class DeepSeekClient:
             "temperature": self.temperature,
             "response_format": {"type": "json_object"},
         }
+
+        # Add optional parameters if configured
+        if self.top_p is not None:
+            payload["top_p"] = self.top_p
+        if self.frequency_penalty is not None:
+            payload["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            payload["presence_penalty"] = self.presence_penalty
 
         try:
             response = requests.post(
@@ -95,6 +106,14 @@ class DeepSeekClient:
             "temperature": self.temperature,
             "response_format": {"type": "json_object"},
         }
+
+        # Add optional parameters if configured
+        if self.top_p is not None:
+            payload["top_p"] = self.top_p
+        if self.frequency_penalty is not None:
+            payload["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            payload["presence_penalty"] = self.presence_penalty
 
         try:
             print(f"  Making API call to DeepSeek (timeout: {self.timeout}s)...")

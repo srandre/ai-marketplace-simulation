@@ -250,19 +250,28 @@ CRITICAL TRADING RULES - READ CAREFULLY
    Example: If your resources show {{"GOLD": 0, "WOOD": 50}}, you CANNOT offer GOLD in any trade!
 
 3. VERIFY TARGET NATION HAS WHAT YOU REQUEST (MANDATORY):
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ⚠️  CHECK THE "resources" FIELD BEFORE PROPOSING! ⚠️
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
    BEFORE proposing a trade, CHECK the "other_nations" data above!
+   Look at their "resources" field to see what they CURRENTLY have!
 
    If you want to BUY resources from a nation:
    - You offer: {{"GOLD": X}}
    - You request: {{"WOOD": Y, "STONE": Z}}
    - CHECK: Does the target nation have AT LEAST Y WOOD and Z STONE in their "resources"?
-   - If NO → DO NOT propose this trade! It will fail and waste your opportunity!
+   - If their resources show {{"WOOD": 0}} → They have NO WOOD! DO NOT request WOOD from them!
+   - If NO → DO NOT propose this trade! It will FAIL and waste your opportunity!
 
    If you want to SELL resources for gold:
    - You offer: {{"WOOD": Y, "STONE": Z}}
    - You request: {{"GOLD": X}}
    - CHECK: Does the target nation have AT LEAST X GOLD in their "resources"?
-   - If NO → DO NOT propose this trade! It will fail and waste your opportunity!
+   - If their resources show {{"GOLD": 30}} and you request {{"GOLD": 50}} → INVALID! They don't have enough!
+   - If NO → DO NOT propose this trade! It will FAIL and waste your opportunity!
+
+   ⚠️ CRITICAL: If this EXACT trade failed before (check your memory), DO NOT try it again!
 
 4. NEVER propose to a nation that rejected you before (check your memory)
 
@@ -299,6 +308,8 @@ If your reasoning mentions "Turkey" → find Turkey's ID in "other_nations" and 
 Example: Reasoning says "Therefore, I will trade with Thailand" and Thailand's id is 1 → target_nation_id MUST be 1
 WRONG: Reasoning says "Thailand" but target_nation_id is 2 (that's Turkey, not Thailand!)
 
+DOUBLE CHECK game_state to see if the target nation actually has the resources you intend to trade for
+
 WHEN TO SKIP (trade: false):
 - No nation has what you're requesting (if buying)
 - No nation has GOLD to pay you (if selling)
@@ -309,7 +320,7 @@ WHEN TO SKIP (trade: false):
 Skipping is a VALID strategic choice! Don't force a bad trade just because you're afraid to skip.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  REASONING MUST BE SHORT - MAXIMUM 3 SENTENCES ⚠️
+  REASONING MUST BE SHORT - MAXIMUM 3 SENTENCES 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 DO NOT ramble. DO NOT analyze multiple options. Pick ONE and state it clearly.
@@ -536,7 +547,11 @@ Examples of GOOD reasoning:
 
 Examples of BAD reasoning (NEVER do this):
 - "Good trade, I'll accept" ← WRONG! Didn't verify you HAVE what they request!
-- "I need their resources" ← WRONG! Didn't check if you can afford what they want!"""
+- "I need their resources" ← WRONG! Didn't check if you can afford what they want!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  REASONING MUST BE SHORT - MAXIMUM 3 SENTENCES 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
     return prompt
 
@@ -649,7 +664,7 @@ Step 3: If either answer is NO → set retry: false
 Step 4: Follow the GOLD-ONLY RULE (one side ONLY GOLD, other side NO GOLD)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  CRITICAL: GENERATORS DO NOT COUNT AS CURRENT RESOURCES! ⚠️
+  CRITICAL: GENERATORS DO NOT COUNT AS CURRENT RESOURCES! 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 DO NOT trade for resources just because a nation has a GENERATOR!
