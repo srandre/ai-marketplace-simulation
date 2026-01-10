@@ -229,13 +229,15 @@ class MainWindow:
                 "Log Details"
             )
 
-            # Preserve selected log when recreating
+            # Preserve selected log and scroll position when recreating
             selected_log = self.logs_panel.selected_log
+            scroll_offset = self.logs_panel.scroll_offset
             self.logs_panel = GameLogsPanel(
                 logs_panel, self.scrollbar_manager,
                 self.flag_images, self.font_small
             )
             self.logs_panel.selected_log = selected_log
+            self.logs_panel.scroll_offset = scroll_offset
 
             self.details_panel = LogDetailsPanel(
                 detail_panel, self.scrollbar_manager, self.font_small
@@ -252,11 +254,13 @@ class MainWindow:
             if self.logs_panel:
                 # Preserve state when recreating
                 selected_log = self.logs_panel.selected_log
+                scroll_offset = self.logs_panel.scroll_offset
                 self.logs_panel = GameLogsPanel(
                     logs_panel, self.scrollbar_manager,
                     self.flag_images, self.font_small
                 )
                 self.logs_panel.selected_log = selected_log
+                self.logs_panel.scroll_offset = scroll_offset
             else:
                 self.logs_panel = GameLogsPanel(
                     logs_panel, self.scrollbar_manager,

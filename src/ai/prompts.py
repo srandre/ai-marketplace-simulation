@@ -278,55 +278,6 @@ STRATEGY - STEP BY STEP:
 IMPORTANT: If you have GOLD and need resources, you should BUY (offer GOLD, request resources)!
 Don't skip trading just because others don't have GOLD - you can use YOUR gold to buy FROM them!
 
-MARKET DYNAMICS - SUPPLY AND DEMAND:
-
-1. CHOOSING THE BEST TRADING PARTNER:
-   When multiple nations have what you need, prefer nations with MORE of that resource:
-   - If buying WOOD: Nation with 200 WOOD is better than nation with 80 WOOD (more supply = more likely to accept)
-   - If selling for GOLD: Nation with 300 GOLD is better than nation with 100 GOLD (more buying power)
-   - Nations with abundant resources are more likely to trade and can handle larger deals
-
-2. PRICING BASED ON YOUR SCARCITY (ERA-RELATIVE):
-   Adjust your offers based on how desperate you are RELATIVE TO YOUR ERA:
-
-   First, check your era advancement requirements to understand what's "a lot" vs "scarce" in YOUR era:
-   - Era 0 (Origin): Requirements are ~50 per resource
-   - Era 1 (Industry): Requirements are ~500 per resource
-   - Era 2 (Information): Requirements are ~5000-20000 per resource
-   - Era 3 (Domination): Requirements are ~50000 per resource
-
-   ABUNDANT = You have 4x+ your era advancement requirement
-   COMFORTABLE = You have 2-4x your era advancement requirement
-   LIMITED = You have 1-2x your era advancement requirement
-   SCARCE = You have less than your era advancement requirement
-
-   If you're BUYING and you have ABUNDANT GOLD (4x+ era requirement):
-   - You can afford to pay MORE to ensure acceptance
-   - Example Era 1: You have 2000 GOLD (4x of 500) → offer generous prices like 150 GOLD for 80 WOOD
-   - Being generous increases your chance of acceptance
-
-   If you're BUYING and you have LIMITED/SCARCE GOLD (1-2x era requirement):
-   - Try to get fair deals, don't overpay
-   - Example Era 1: You have 600 GOLD (barely above 500) → offer conservative prices like 90 GOLD for 80 WOOD
-
-   If you're SELLING and you have EXCESS resources (3x+ era requirement):
-   - You can offer MORE generous amounts to get GOLD quickly
-   - Example Era 2: You have 18000 WOOD (3x of 6000) → sell 1000 WOOD for 1200 GOLD (generous amount)
-   - Moving excess resources for gold is strategic
-
-   If you're SELLING and you have LIMITED/SCARCE resources (less than 2x era requirement):
-   - Ask for MORE GOLD per resource, don't undersell
-   - Example Era 2: You have 7000 STONE (barely above 6000) → sell 400 STONE for 1000 GOLD (premium price)
-
-   But remember: you can adjust these based on YOUR scarcity and THEIR abundance!
-
-4. EXAMPLES OF MARKET-AWARE TRADING (ERA-RELATIVE):
-   ✓ GOOD (Era 0): "I have 250 GOLD (5x of 50 requirement = abundant). USA has 180 WOOD. I'll offer 120 GOLD for 60 WOOD (generous) to ensure acceptance."
-   ✓ GOOD (Era 1): "I have 400 WOOD (below 500 requirement = scarce). Japan has 2500 GOLD (5x of 500 = abundant). I'll sell 80 WOOD for 250 GOLD (premium price) since I'm near my advancement threshold."
-   ✓ GOOD (Era 2): "I have 18000 STONE (3x of 6000 requirement = excess). Turkey has 8000 GOLD. I'll sell 2500 STONE for 3000 GOLD (generous amount) to convert excess."
-   ✗ BAD (Era 1): "I have 550 GOLD (barely above 500 requirement = limited). I'll offer 500 GOLD for resources" ← spending almost all your gold when you're close to advancement threshold is risky!
-   ✗ BAD (Era 0): "I have 35 WOOD (below 50 requirement = scarce). I'll sell 30 WOOD for 40 GOLD" ← undervaluing scarce resources when you need them for advancement!
-
 BEFORE RESPONDING, COMPLETE THIS VERIFICATION CHECKLIST:
 
 Step 1: What do I need? (Check your resources vs era requirements)
@@ -357,32 +308,34 @@ WHEN TO SKIP (trade: false):
 
 Skipping is a VALID strategic choice! Don't force a bad trade just because you're afraid to skip.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  REASONING MUST BE SHORT - MAXIMUM 3 SENTENCES ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DO NOT ramble. DO NOT analyze multiple options. Pick ONE and state it clearly.
+
+CRITICAL: If you have a GENERATOR for what you're selling, MENTION IT in your reasoning!
+This justifies why you can afford to sell - you'll regenerate it next turn.
+
 Respond with JSON:
 {{
     "trade": true/false,
     "target_nation_id": <nation_id or null>,
     "offering": {{"GOLD": 100}} or {{"WOOD": 50, "STONE": 30}},
     "requesting": {{"WOOD": 50, "STONE": 30}} or {{"GOLD": 100}},
-    "reasoning": "Target nation [NAME] has [X GOLD / Y WOOD, Z STONE]. [Explanation]. Therefore, I will [trade/skip]."
+    "reasoning": "MAXIMUM 3 sentences. What I have (mention generator!), what they have, decision."
 }}
 
-Your reasoning MUST:
-1. Start by stating what YOU have (your own resources)
-2. State what the target nation HAS
-3. End with "Therefore, I will trade with [NAME]" or "Therefore, I will skip trading"
+✓ EXCELLENT examples (SHORT, mentions generators):
+- "I have 50 STONE and QUARRY (produces STONE). Belgium has 50 GOLD. Selling 30 STONE for 30 GOLD."
+- "I have FARM (produces FOOD) and 100 FOOD. Egypt has 80 GOLD. Selling 50 FOOD for 60 GOLD."
+- "I have MINE (produces GOLD) and 50 GOLD. Norway has 80 WOOD. Buying 50 WOOD for 50 GOLD."
+- "I have 0 GOLD. Can't buy anything. Skipping."
 
-Examples of GOOD reasoning:
-- "I have 50 WOOD. Norway has 200 GOLD. I'll sell them 50 WOOD for 100 GOLD to get gold for buildings. Therefore, I will trade with Norway."
-- "I have 100 GOLD. Egypt has 80 WOOD and 60 STONE. I'll buy 50 WOOD with 100 GOLD to advance era. Therefore, I will trade with Egypt."
-- "I have 0 GOLD. Norway has 200 GOLD. I cannot buy from anyone without GOLD. Therefore, I will skip trading."
-- "I have 50 WOOD but 0 GOLD. Egypt has 0 GOLD. I cannot sell to Egypt because they have no GOLD to pay me. Therefore, I will skip trading."
-
-Examples of BAD reasoning (NEVER do this):
+✗ BAD examples (too long, rambles):
+- "I have 50 STONE and 0 GOLD. Belgium and Pakistan have 50 GOLD each, but I cannot offer GOLD to buy resources because I have 0 GOLD. I could sell STONE for GOLD, but I have a QUARRY that produces STONE..." ← TOO LONG! You'll get confused!
 - "Egypt has wood but no gold, so I'll sell stone for gold" ← WRONG! They have no gold!
 - "I need resources so I'll trade" ← Didn't verify YOU have what you're offering!
-- "I'll offer 100 GOLD to buy WOOD" when you have 0 GOLD ← WRONG! You don't have GOLD!
-- Reasoning says "Therefore, I will trade with Thailand" but JSON has target_nation_id: 2 (Turkey) ← WRONG! IDs don't match!
-- Reasoning says "invalid" but JSON has trade: true ← WRONG! Must match!
 
 NOTE: Setting trade: false ends your trading phase and moves you to the build phase."""
 
@@ -516,6 +469,10 @@ def create_trade_response_prompt(
             "name": nation.name,
             "era": nation.era.value,
             "resources": nation.inventory.to_dict(),
+            "generators": [
+                {"type": g.generator_type.value, "produces": g.produces.value}
+                for g in nation.generators
+            ],
         },
         "proposer": {
             "name": proposer_nation["name"],
@@ -556,58 +513,11 @@ Consider:
 3. Is this a fair trade (consider market value)?
 4. How is your relationship with them? (Current: {relationship})
 5. Will this help you reach your era advancement goals?
+6. Do I have any generators for the resource they're asking? If so, I should be more likely to accept, because I will generate more at the start of next turn.
 
 REMEMBER: All trades must follow the gold-only rule:
 - One side must be ONLY GOLD
 - The other side must have NO GOLD
-
-MARKET DYNAMICS - EVALUATING OFFERS (ERA-RELATIVE):
-
-1. ASSESS YOUR SCARCITY RELATIVE TO YOUR ERA:
-   Before deciding, check if you're ABUNDANT or SCARCE in what they're requesting:
-
-   Compare what they want to YOUR era advancement requirements:
-   - ABUNDANT = You have 4x+ your era requirement for that resource
-   - COMFORTABLE = You have 2-4x your era requirement
-   - LIMITED = You have 1-2x your era requirement
-   - SCARCE = You have less than your era requirement
-
-   If they want GOLD and you have ABUNDANT GOLD (4x+ era requirement):
-   - You can afford to be generous, consider ACCEPTING even if slightly unfavorable
-   - Example Era 1: They want 200 GOLD for 120 WOOD, you have 2500 GOLD (5x of 500) → ACCEPT (you have plenty)
-
-   If they want GOLD and you have LIMITED/SCARCE GOLD (less than 2x era requirement):
-   - Be more selective, demand better rates
-   - Example Era 1: They want 300 GOLD for 180 WOOD, you have 650 GOLD (1.3x of 500) → COUNTER for 200 GOLD or REJECT
-
-   If they want RESOURCES and you have ABUNDANT resources (4x+ era requirement):
-   - You can afford to sell generously
-   - Example Era 2: They want 1500 WOOD, you have 25000 WOOD (4x+ of 6000) → ACCEPT
-
-   If they want RESOURCES and you have LIMITED/SCARCE resources (less than 2x era requirement):
-   - Demand premium prices, don't undersell
-   - Example Era 0: They want 30 WOOD for 40 GOLD, you have 70 WOOD (1.4x of 50) → COUNTER for 20 WOOD or demand 60 GOLD
-
-2. ASSESS YOUR NEED:
-   Check if what they're offering is CRITICAL to your advancement:
-
-   If they're offering resources you DESPERATELY need (to advance era):
-   - Be willing to pay premium or accept less favorable terms
-   - Example: You need 30 WOOD for advancement, they offer 40 WOOD for 90 GOLD → ACCEPT (critical need)
-
-   If they're offering resources you DON'T urgently need:
-   - Demand better rates or REJECT
-   - Example: You need WOOD but they're offering STONE → REJECT or COUNTER
-
-   When YOU are abundant in what they want: Accept 1.2-1.5x rates (generous)
-   When YOU are scarce in what they want: Demand 2-2.5x rates (premium)
-
-3. EXAMPLES OF MARKET-AWARE RESPONSES (ERA-RELATIVE):
-   ✓ GOOD (Era 0): "They want 80 GOLD for 50 WOOD. I have 300 GOLD (6x of 50 = abundant) and need WOOD urgently. Fair deal. ACCEPT."
-   ✓ GOOD (Era 1): "They want 300 STONE for 400 GOLD. I have 750 STONE (1.5x of 500 = limited). This undervalues my limited supply. COUNTER for 200 STONE or 600 GOLD."
-   ✓ GOOD (Era 2): "They want 2000 GOLD for 1200 WOOD. I have 7000 GOLD (1.4x of 5000 = limited) and need to save for building. REJECT."
-   ✗ BAD (Era 0): "They want 50 WOOD for 60 GOLD. I have 200 WOOD (4x of 50 = abundant). REJECT." ← You're abundant, should accept or counter generously!
-   ✗ BAD (Era 1): "They want 400 GOLD for 250 STONE. I have 600 GOLD (1.2x of 500 = limited). ACCEPT." ← You're limited in GOLD, should counter down!
 
 Respond with JSON:
 {{
@@ -671,35 +581,6 @@ CRITICAL VERIFICATION:
 - If they request {{"GOLD": 100}} and you have {{"GOLD": 50}} → YOU MUST REJECT!
 - If they request {{"WOOD": 50}} and you have {{"WOOD": 40}} → YOU MUST REJECT!
 - Always verify EVERY resource they're requesting against YOUR resources
-
-MARKET DYNAMICS - EVALUATING COUNTER-OFFERS (ERA-RELATIVE):
-
-Check if the counter-offer is better or worse based on YOUR scarcity RELATIVE TO YOUR ERA:
-
-Use these thresholds relative to your era advancement requirements:
-- ABUNDANT = 4x+ era requirement
-- COMFORTABLE = 2-4x era requirement
-- LIMITED = 1-2x era requirement
-- SCARCE = Less than era requirement
-
-If they're asking for LESS than your original offer:
-- This is better for you! Consider ACCEPTING if you can afford it
-- Example Era 1: You offered 300 GOLD, they counter asking for 220 GOLD → ACCEPT
-
-If they're asking for MORE than your original offer:
-- Check YOUR scarcity: Are you ABUNDANT in what they want?
-- If ABUNDANT (4x+ era requirement) → Consider ACCEPTING to close the deal
-- If LIMITED/SCARCE (less than 2x era requirement) → REJECT, you can't afford premium pricing
-
-If they're offering LESS than you requested:
-- Check if you DESPERATELY need what they're offering
-- If CRITICAL for era advancement → Consider ACCEPTING partial amount
-- If NOT urgent → REJECT and try another partner
-
-Examples (ERA-RELATIVE):
-✓ (Era 0): "They counter with 70 GOLD for 50 WOOD (I offered 90 GOLD). I have 250 GOLD (5x of 50 = abundant). Better deal. ACCEPT."
-✓ (Era 1): "They counter with 300 WOOD for 450 GOLD (I offered 350 GOLD). I have 650 GOLD (1.3x of 500 = limited). Can't afford premium. REJECT."
-✗ (Era 2): "They counter with 1500 GOLD for 800 WOOD (I offered 1800 GOLD). REJECT." ← They're asking LESS gold, this is BETTER for you!
 
 Decide whether to accept or reject this counter-offer.
 
@@ -767,10 +648,30 @@ Step 2: Does the alternative nation HAVE what I'm requesting? (Check their resou
 Step 3: If either answer is NO → set retry: false
 Step 4: Follow the GOLD-ONLY RULE (one side ONLY GOLD, other side NO GOLD)
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  CRITICAL: GENERATORS DO NOT COUNT AS CURRENT RESOURCES! ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DO NOT trade for resources just because a nation has a GENERATOR!
+
+- Generators produce resources at the START of NEXT turn
+- You are trading RIGHT NOW, THIS turn
+- If they have LUMBER_CAMP but "resources": {{"WOOD": 0}} → They have NO WOOD to trade RIGHT NOW!
+- If they have MINE but "resources": {{"GOLD": 0}} → They have NO GOLD to trade RIGHT NOW!
+
+ALWAYS CHECK THE "resources" FIELD, NOT THE "generators" FIELD!
+
+Examples:
+✗ BAD: "Denmark has LUMBER_CAMP (produces WOOD), so I'll trade for WOOD" ← WRONG! Check their resources!
+✓ GOOD: "Denmark has 0 WOOD in resources, so they cannot fulfill my WOOD request. I will not retry."
+✗ BAD: "Finland has MINE, so I'll request GOLD from them" ← WRONG! Do they have GOLD NOW?
+✓ GOOD: "Finland has 50 GOLD in resources. They can fulfill my 50 GOLD request. I will retry."
+
 CRITICAL VERIFICATION:
 - If you want to offer {{"GOLD": 100}} but you only have {{"GOLD": 50}} → DO NOT RETRY!
 - If you want to request {{"WOOD": 50}} but alternative nation has {{"WOOD": 30}} → DO NOT RETRY!
-- Always verify BOTH what you're offering (you must have it) AND what you're requesting (they must have it)
+- If alternative nation has LUMBER_CAMP but {{"WOOD": 0}} in resources → DO NOT RETRY for WOOD!
+- Always verify BOTH what you're offering (you must have it) AND what you're requesting (they must have it NOW)
 
 IMPORTANT RULES:
 1. You must still HAVE what you want to offer
@@ -779,61 +680,6 @@ IMPORTANT RULES:
 4. Choose wisely - consider relationships and strategic value
 5. If no good alternative exists, set retry: false
 6. You can propose different amounts or different resources than the rejected trade
-
-MARKET DYNAMICS - CHOOSING BETTER PARTNERS:
-
-Your trade was rejected. Use market dynamics to find a BETTER partner:
-
-1. CHOOSE PARTNERS WITH MORE SUPPLY:
-   Why was your trade rejected? Possibly because they didn't have enough or didn't want to trade.
-   Look for nations with MORE of what you need:
-
-   If you were BUYING resources:
-   - Original partner had 80 WOOD and rejected
-   - Look for nations with 150+ WOOD (more likely to accept)
-   - They have abundance, more willing to sell
-
-   If you were SELLING for GOLD:
-   - Original partner had 120 GOLD and rejected
-   - Look for nations with 250+ GOLD (more likely to buy)
-   - They have more buying power
-
-2. ADJUST YOUR OFFER TO BE MORE ATTRACTIVE (ERA-RELATIVE):
-   If your original offer was borderline, make it MORE generous for the new partner:
-
-   Use these thresholds relative to YOUR era advancement requirements:
-   - ABUNDANT = 4x+ era requirement
-   - COMFORTABLE = 2-4x era requirement
-   - LIMITED = 1-2x era requirement
-   - SCARCE = Less than era requirement
-
-   If you have ABUNDANT resources (4x+ era requirement of what you're offering):
-   - Increase the amount you're offering to sweeten the deal
-   - Example Era 1: You have 2500 WOOD (5x of 500). Originally offered 200 WOOD for 250 GOLD → Now offer 280 WOOD for 250 GOLD
-
-   If you have ABUNDANT GOLD (4x+ era requirement):
-   - Increase your offer to ensure acceptance
-   - Example Era 0: You have 250 GOLD (5x of 50). Originally offered 70 GOLD for 40 WOOD → Now offer 90 GOLD for 40 WOOD
-
-3. CONSIDER COMPLETELY DIFFERENT TRADES:
-   Maybe the market doesn't want what you're offering. Consider switching strategies:
-
-   If you were trying to SELL resources but got rejected:
-   - Maybe nobody wants to buy right now
-   - Try BUYING instead if you have GOLD
-   - Example: Switch from selling WOOD to buying STONE
-
-   If you were trying to BUY but got rejected:
-   - Maybe you need to get GOLD first
-   - Try SELLING excess resources for GOLD instead
-   - Example: Switch from buying WOOD to selling STONE for GOLD
-
-4. EXAMPLES OF MARKET-AWARE ALTERNATIVE TRADES (ERA-RELATIVE):
-   ✓ GOOD (Era 0): "Rejected by Turkey (90 WOOD). I have 250 GOLD (5x of 50 = abundant). USA has 200 WOOD (more supply). I'll offer 120 GOLD (more generous) for 60 WOOD."
-   ✓ GOOD (Era 1): "Rejected by Egypt (800 GOLD). I have 2200 STONE (4.4x of 500 = abundant). Japan has 2500 GOLD (5x of 500 = more buying power). I'll sell 350 STONE for 450 GOLD."
-   ✓ GOOD (Era 2): "Rejected by Norway. Nobody wants to buy WOOD. I have 7000 GOLD (1.4x of 5000 = limited). I'll switch strategy and BUY STONE from Thailand instead."
-   ✗ BAD (Era 1): "Rejected by partner with 800 WOOD. New partner has 550 WOOD (less supply). I'll try them." ← Choose partners with MORE resources!
-   ✗ BAD (Era 0): "I was rejected so I'll try the exact same offer with someone who has less." ← Be more generous or find better partners!
 
 Respond with JSON:
 {{

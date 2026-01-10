@@ -114,7 +114,7 @@ class GameController:
         # Create clearer log message based on decision
         if response_type == "ACCEPT":
             log_summary = f"{responder.name} accepts trade from {initiator.name}"
-        elif response_type == "COUNTER":
+        elif response_type == "COUNTER" or response_type == 'ACUNTER':
             log_summary = f"{responder.name} counters trade from {initiator.name}"
         else:
             log_summary = f"{responder.name} rejects trade from {initiator.name}"
@@ -137,7 +137,7 @@ class GameController:
         if response_type == "ACCEPT":
             self.trading_manager.accept_trade(transaction)
             return "ACCEPTED"
-        elif response_type == "COUNTER":
+        elif response_type == "COUNTER" or response_type == 'ACUNTER':
             counter_offer_data = decision.get("counter_offer", {})
             counter_offer = self.decision_maker.parse_trade_offer(counter_offer_data)
             if counter_offer and counter_offer.is_valid():
