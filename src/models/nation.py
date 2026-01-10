@@ -76,7 +76,14 @@ class Nation(BaseModel):
             if era_cfg.get("index") == current_index + 1:
                 # Found the next era
                 try:
-                    self.era = Era(era_cfg.get("index"))
+                    new_era_index = era_cfg.get("index")
+                    self.era = Era(new_era_index)
+
+                    # Update all existing generators to produce at the new era's rate
+                    new_base_generation = era_cfg.get("base_generation", 10)
+                    for generator in self.generators:
+                        generator.generation_amount = new_base_generation
+
                     return True
                 except ValueError:
                     return False

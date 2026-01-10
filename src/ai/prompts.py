@@ -175,7 +175,11 @@ def _format_memory_context(nation) -> str:
 
         elif decision_type == 'trade_response':
             decision_val = decision.get('decision', 'UNKNOWN')
-            decision_str = f"{decision_val} a trade offer"
+            reasoning = decision.get('reasoning', '')
+            if reasoning:
+                decision_str = f"{decision_val} a trade offer ({reasoning})"
+            else:
+                decision_str = f"{decision_val} a trade offer"
 
         elif decision_type == 'build':
             if decision.get('build'):
@@ -208,7 +212,23 @@ def _format_memory_context(nation) -> str:
             else:
                 decision_str = "Gave up on finding alternative trade partner"
         else:
-            decision_str = f"Made decision: {decision}"
+            # Fallback for unknown decision types - try to extract meaningful info
+            if isinstance(decision, dict):
+                reasoning = decision.get('reasoning', '')
+                if reasoning:
+                    decision_str = f"Decision: {reasoning}"
+                else:
+                    # Try to format the dict nicely
+                    parts = []
+                    for key, val in decision.items():
+                        if key != 'reasoning' and val:
+                            parts.append(f"{key}={val}")
+                    if parts:
+                        decision_str = f"Decision: {', '.join(parts)}"
+                    else:
+                        decision_str = f"Decision type '{decision_type}' (details unknown)"
+            else:
+                decision_str = f"Decision: {decision}"
 
         memory_text += f"Round {mem['round']}, Turn {mem['turn']}: {decision_str}\n"
 
@@ -257,21 +277,21 @@ def _format_nation_summary(nation_data: Dict[str, Any]) -> str:
     else:
         has_now = ", ".join(tradeable_now)
 
-    # List what they WILL PRODUCE (generators)
+    # List generators and what they produce
     gen_parts = []
     for g in generators:
         gen_type = g["type"]
         produces = g["produces"]
-        gen_parts.append(f"{gen_type} (will produce {produces} next turn)")
+        gen_parts.append(f"{gen_type} → {produces} next turn")
 
     if gen_parts:
-        will_produce = ", ".join(gen_parts)
+        generators_str = ", ".join(gen_parts)
     else:
-        will_produce = "No generators"
+        generators_str = "None"
 
     return f"""{name}:
       HAS NOW: {has_now}
-      WILL PRODUCE: {will_produce}"""
+      GENERATORS: {generators_str}"""
 
 
 def create_trading_phase_prompt(
@@ -298,17 +318,17 @@ def create_trading_phase_prompt(
     else:
         your_has_now = ", ".join(your_tradeable)
 
-    # List what YOU will produce (generators)
+    # List YOUR generators and what they produce
     your_gen_parts = []
     for g in nation.generators:
         gen_type = g.generator_type.value
         produces = g.produces.value
-        your_gen_parts.append(f"{gen_type} (will produce {produces} next turn)")
+        your_gen_parts.append(f"{gen_type} → {produces} next turn")
 
     if your_gen_parts:
-        your_will_produce = ", ".join(your_gen_parts)
+        your_generators = ", ".join(your_gen_parts)
     else:
-        your_will_produce = "No generators"
+        your_generators = "None"
 
     # Goal info
     goal_parts = []
@@ -405,14 +425,14 @@ CURRENT GAME STATE:
 
 YOUR NATION: {nation.name}
   HAS NOW: {your_has_now}
-  WILL PRODUCE: {your_will_produce}
+  GENERATORS: {your_generators}
 
 YOUR GOAL: Advance to Era {nation.era.value + 1}
   Requirements: {goal_str}
 
 ________________________________________________________________________________
 OTHER NATIONS - READ "HAS NOW" CAREFULLY! That's what you can trade for RIGHT NOW!
-(Generators only show what they'll produce NEXT turn - you CANNOT trade for future production!)
+(GENERATORS shows what resources they'll produce NEXT turn - you CANNOT trade for future production!)
 ________________________________________________________________________________
 {other_nations_str}
 
@@ -466,21 +486,27 @@ BUILD PHASE
 
 Build ONE generator or skip.
 
+CRITICAL AFFORDABILITY CHECK (do this FIRST):
+1. Look at YOUR resources below
+2. Look at GENERATOR COSTS below
+3. Can you afford it? Check EACH resource requirement
+4. If you DON'T have enough → build: false, generator_type: null
+5. If you DO have enough → build: true, generator_type: "TYPE"
+
+CRITICAL - REASONING MUST MATCH DECISION:
+- If reasoning says "cannot afford" → build MUST be false
+- If reasoning says "building" → build MUST be true
+- If reasoning says "skipping" → build MUST be false
+- NO contradictions allowed!
+
 RULES:
-- Check generator costs below
-- Verify YOU have enough resources
 - For FARM: specify payment_resource (WOOD or STONE)
-- If you can't afford it, set build: false
+- For all others: payment_resource must be null
 
 STRATEGY:
 - What do I need for next era? (see requirements below)
 - Which generator produces what I need?
-- Can I afford it with my current resources?
-
-IMPORTANT - GOLD IS CRITICAL:
-- MINE produces GOLD (needed for all trades!)
-- Without GOLD, you cannot BUY resources from other nations
-- GOLD unlocks trading opportunities - prioritize MINE if you can afford it
+- MINE produces GOLD (needed for all trades - prioritize if affordable)
 
 Respond with JSON (keep reasoning ≤2 sentences):
 {{
