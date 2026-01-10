@@ -214,6 +214,22 @@ class GameController:
                     )
                     return "INVALID"
 
+        # Check if initiator has the resources they're offering (before proposing)
+        for resource_type, amount in offering.items():
+            if not nation.inventory.has(resource_type, amount):
+                # Log the failed trade attempt - initiator lacks resources
+                from ..models.enums import LogType
+                self.game_state.game_log.add_entry(
+                    log_type=LogType.TRADE_REJECTED,
+                    turn_number=self.game_state.turn_number,
+                    round_number=self.game_state.round_number,
+                    summary=f"{nation.name} trade failed: {nation.name} lacks resources to offer",
+                    nations_involved=[nation.id, target_id],
+                    details={"offer": trade_offer.to_dict(), "reason": f"{nation.name} has insufficient resources to offer"},
+                )
+                print(f"[TRADE FAILED] {nation.name} lacks resources: offered {offering}, has {nation.inventory.to_dict()}")
+                return "INVALID"
+
         # Propose trade
         transaction = self.trading_manager.propose_trade(
             nation.id, target_id, trade_offer

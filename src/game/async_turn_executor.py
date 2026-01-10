@@ -175,9 +175,9 @@ class AsyncTurnExecutor:
                             trades_completed += 1
                             trade_summaries.append(f"traded with {target_nation.name}")
                         elif result == "INVALID":
-                            # Invalid trade (target lacks resources) - NO RETRY allowed
-                            trade_summaries.append(f"trade failed: {target_nation.name} lacks resources")
-                            print(f"[WARNING] {current_nation.name} proposed invalid trade to {target_nation.name} (lacks resources)")
+                            # Invalid trade - could be initiator or target lacks resources
+                            trade_summaries.append(f"trade failed: insufficient resources")
+                            print(f"[WARNING] {current_nation.name} proposed invalid trade to {target_nation.name} (insufficient resources)")
                         elif result == "REJECTED":
                             trade_summaries.append(f"trade rejected by {target_nation.name}")
 

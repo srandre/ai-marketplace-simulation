@@ -165,7 +165,7 @@ ai:
   model: "deepseek-chat"
   # API key is loaded from .env file (DEEPSEEK_API_KEY)
   max_tokens: 1500
-  temperature: 0.1
+  temperature: 0.9
   timeout_seconds: 30
 
 nations:
