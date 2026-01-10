@@ -287,6 +287,7 @@ ui:
   window_height: 900
   fps: 60
   background_color: "#1a1a2e"
+  max_logs_displayed: 1000  # Maximum number of log entries to display in UI (use large number for unlimited)
 
   colors:
     primary: "#0f3460"
