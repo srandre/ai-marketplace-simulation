@@ -99,70 +99,29 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
 
     return f"""You are an AI controlling a nation in a strategic resource management game.
 
-Your goal is to advance through the eras by collecting resources and building generators.
+OBJECTIVE: Advance through eras by collecting resources and building generators. Reaching {final_era_name} = WIN.
 
-GAME RULES:
-- There are {len(eras_sorted)} eras: {era_list}
-- You advance eras automatically when you have enough resources at turn start
-- Each era unlocks new resources and multiplies generation significantly
-- Advancing to {final_era_name} guarantees your victory immediately
-- Resources: Gold (💰), Wood (🪵), Stone (🪨), Food (🌾), Technology (⚙️), Information (💾)
+ERAS ({len(eras_sorted)} total):
+{era_list}
 
 RESOURCE UNLOCKING BY ERA:
 {resource_unlocking_text}
 
-CRITICAL TRADING RULE: You can ONLY trade resources that BOTH you AND your trading partner have unlocked!
-- Example: If you're in a later era and they're in an earlier era, you CANNOT trade advanced resources with them
-- Always check the target nation's era before proposing a trade involving advanced resources
-
-ERA ADVANCEMENT REQUIREMENTS (you advance automatically at turn start when you have these):
+ERA ADVANCEMENT (automatic at turn start when you have these resources):
 {advancement_text}
 
-GENERATORS (base costs):
+GENERATORS (base costs - increase exponentially as more are built globally):
 {generators_text}
 
-Generator prices increase exponentially depending on how many of that type exist globally:
-Current cost = base cost × 2^n (where n = number of that generator type already built by any nation)
-e.g. if there are 4 MINES in the game, the cost to build a 5th one would be 80 Wood + 80 Stone
+IMPORTANT: Generator costs scale as: current_cost = base_cost × 2^(total_built_globally)
+Example: If 4 MINES exist globally, the 5th costs 80 WOOD + 80 STONE (10×2^4)
 
-TURN STRUCTURE (Two Phases):
-Each turn has two distinct phases:
+TURN STRUCTURE:
+1. TRADING PHASE: Propose up to 2 trades (can skip or stop after first)
+   - If rejected, get ONE chance to retry with different/same partner
+   - Trading rules enforced in prompts
 
-PHASE 1 - TRADING PHASE (up to 2 trades):
-- You can propose up to 2 trades total this phase
-- After each trade proposal, if rejected, you get ONE retry with a different (or same) nation
-- You can skip trading entirely or stop after the first trade
-- Strategic example: Sell resources for gold, then buy different resources with that gold
-
-PHASE 2 - BUILD PHASE (1 build):
-- After trading completes, you can build ONE generator (or skip)
-- If you cannot afford ANY generator, your turn is automatically skipped
-
-TRADING RULES (CRITICAL):
-- ALL trades must be gold-for-resources exchanges
-- One side offers ONLY GOLD (no other resources)
-- The other side offers one or more resources (but NO GOLD)
-- Before proposing, verify the target nation HAS the resources you want
-- Examples:
-  ✓ VALID: Offer [100 GOLD] for [50 WOOD, 30 STONE]
-  ✓ VALID: Offer [50 WOOD, 30 STONE] for [100 GOLD]
-  ✗ INVALID: Offer [50 GOLD, 10 WOOD] for [30 STONE] (gold mixed with resources)
-  ✗ INVALID: Offer [50 WOOD] for [30 STONE] (no gold on either side)
-  ✗ INVALID: Offer [50 WOOD] for [30 GOLD] when the other nation has only [10 GOLD]
-
-DIPLOMACY:
-- Relationships start at 0 (neutral)
-- Successful trades improve relationships (+1)
-- Failed trades hurt relationships (-1)
-- Consider relationships when making offers
-- Don't make extremely unfair offers that harm your reputation
-
-STRATEGY:
-- Focus on advancing to the next era
-- Build generators to increase resource production
-- Use the trading phase strategically (sell then buy, or buy resources for building)
-- Balance short-term needs with long-term goals
-- Consider which nations have resources you need
+2. BUILD PHASE: Build ONE generator or skip
 
 You must respond with valid JSON only. No explanations outside the JSON structure."""
 

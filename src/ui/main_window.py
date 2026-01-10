@@ -60,7 +60,7 @@ class MainWindow:
         self.detail_content_height = 0  # Actual content height of detail panel
 
         # Scrollbar dragging state
-        self.dragging_scrollbar = None  # 'logs' or 'detail'
+        self.dragging_scrollbar = None  # 'logs', 'detail', or 'modal'
         self.drag_start_y = 0
         self.drag_start_offset = 0
 
@@ -81,6 +81,8 @@ class MainWindow:
         # Modal state
         self.show_system_prompt_modal = False
         self.modal_scroll_offset = 0
+        self.modal_content_height = 0  # Actual content height of modal
+        self.modal_copy_button_rect = None  # Copy button for modal
 
         # Async turn execution
         from ..game.async_turn_executor import AsyncTurnExecutor
@@ -301,6 +303,15 @@ class MainWindow:
                         # Clicked outside modal (backdrop), close it
                         self.show_system_prompt_modal = False
                         self.modal_scroll_offset = 0
+                    else:
+                        # Check if clicked on modal copy button
+                        if self.modal_copy_button_rect and self.modal_copy_button_rect.collidepoint(mouse_pos):
+                            self._copy_modal_to_clipboard()
+                        # Check if clicked on modal scrollbar
+                        elif self._is_modal_scrollbar_clicked(mouse_pos):
+                            self.dragging_scrollbar = 'modal'
+                            self.drag_start_y = mouse_pos[1]
+                            self.drag_start_offset = self.modal_scroll_offset
                     continue  # Don't process other clicks when modal is open
 
                 # Check if clicked on info button
@@ -354,12 +365,9 @@ class MainWindow:
                 if self.show_system_prompt_modal:
                     modal_rect = self._get_modal_rect()
                     if modal_rect.collidepoint(mouse_pos):
-                        # Calculate max scroll
-                        system_prompt = self.controller.decision_maker.system_prompt
-                        line_height = 20
-                        total_content_height = len(system_prompt.split('\n')) * line_height
+                        # Calculate max scroll using actual content height
                         content_height = modal_rect.height - 140  # Account for title, hint, and padding
-                        max_scroll = max(0, total_content_height - content_height)
+                        max_scroll = max(0, self.modal_content_height - content_height)
 
                         self.modal_scroll_offset -= event.y * 30
                         self.modal_scroll_offset = max(0, min(max_scroll, self.modal_scroll_offset))
@@ -781,6 +789,28 @@ class MainWindow:
                 scroll_delta = (mouse_delta / scrollable_area) * max_scroll
                 new_offset = self.drag_start_offset + scroll_delta
                 self.detail_scroll_offset = int(max(0, min(max_scroll, new_offset)))
+
+        elif self.dragging_scrollbar == 'modal':
+            modal_rect = self._get_modal_rect()
+            scrollbar_rect = self._get_modal_scrollbar_rect(modal_rect)
+
+            # Use actual content height tracked during drawing
+            content_height = modal_rect.height - 140
+            total_content = max(content_height, self.modal_content_height)
+            max_scroll = max(0, total_content - content_height)
+
+            # Calculate how much the mouse moved
+            mouse_delta = mouse_pos[1] - self.drag_start_y
+
+            # Convert mouse movement to scroll movement
+            scrollbar_height = scrollbar_rect.height
+            thumb_height = max(20, int((content_height / total_content) * scrollbar_height))
+            scrollable_area = scrollbar_height - thumb_height
+
+            if scrollable_area > 0:
+                scroll_delta = (mouse_delta / scrollable_area) * max_scroll
+                new_offset = self.drag_start_offset + scroll_delta
+                self.modal_scroll_offset = int(max(0, min(max_scroll, new_offset)))
 
     def _draw_scrollbar(self, panel_rect: pygame.Rect, scroll_offset: int,
                        content_height: int, visible_height: int) -> None:
@@ -1472,9 +1502,9 @@ class MainWindow:
         system_prompt = self.controller.decision_maker.system_prompt
 
         # Draw system prompt text with wrapping
+        y_start = content_y  # Track starting Y position (before scroll offset)
         y = content_y - self.modal_scroll_offset
         line_height = 20
-        start_y = y  # Track starting Y position
 
         for line in system_prompt.split('\n'):
             if line.strip():
@@ -1503,11 +1533,15 @@ class MainWindow:
                 # Empty line
                 y += line_height // 2
 
-        # Calculate actual rendered height
-        total_content_height = y - start_y
+        # Calculate actual rendered height (add back scroll offset to get true total)
+        total_content_height = y - y_start + self.modal_scroll_offset
+        self.modal_content_height = total_content_height  # Store for scrollbar dragging
 
         # Reset clipping
         self.screen.set_clip(None)
+
+        # Draw copy button
+        self._draw_modal_copy_button(modal_rect)
 
         # Draw scrollbar if needed
         if total_content_height > content_height:
@@ -1536,6 +1570,30 @@ class MainWindow:
         # Draw thumb
         thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
         draw_rounded_rect(self.screen, colors.ACCENT, thumb_rect, border_radius=4)
+
+    def _get_modal_scrollbar_rect(self, modal_rect: pygame.Rect) -> pygame.Rect:
+        """Get the scrollbar rectangle for the modal."""
+        scrollbar_width = 8
+        content_height = modal_rect.height - 140
+        scrollbar_x = modal_rect.right - scrollbar_width - 15
+        scrollbar_y = modal_rect.top + 100  # Below title and hint
+        scrollbar_height = content_height
+        return pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
+
+    def _is_modal_scrollbar_clicked(self, mouse_pos: tuple) -> bool:
+        """Check if click is on modal scrollbar."""
+        if not self.show_system_prompt_modal:
+            return False
+
+        modal_rect = self._get_modal_rect()
+        content_height = modal_rect.height - 140
+
+        # Only show scrollbar if content is larger than visible area
+        if self.modal_content_height <= content_height:
+            return False
+
+        scrollbar_rect = self._get_modal_scrollbar_rect(modal_rect)
+        return scrollbar_rect.collidepoint(mouse_pos)
 
     def _draw_copy_button(self):
         """Draw copy button in the detail panel."""
@@ -1610,6 +1668,41 @@ class MainWindow:
                 print("[INFO] Log copied to clipboard")
             except Exception as e:
                 print(f"[ERROR] Failed to copy to clipboard: {e}")
+
+    def _draw_modal_copy_button(self, modal_rect: pygame.Rect):
+        """Draw copy button in the system prompt modal."""
+        # Button dimensions and position (top-right corner of modal, below title)
+        button_width = 60
+        button_height = 28
+        button_x = modal_rect.x + modal_rect.width - button_width - 25
+        button_y = modal_rect.y + 60  # Below the title and hint
+
+        # Create button rect
+        self.modal_copy_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+
+        # Check hover state
+        mouse_pos = pygame.mouse.get_pos()
+        is_hover = self.modal_copy_button_rect.collidepoint(mouse_pos)
+
+        # Draw button
+        button_color = colors.ACCENT if is_hover else colors.SECONDARY
+        draw_rounded_rect(self.screen, button_color, self.modal_copy_button_rect, border_radius=5)
+        draw_rounded_rect_border(self.screen, colors.ACCENT, self.modal_copy_button_rect, border_radius=5, width=2)
+
+        # Draw text
+        text_color = colors.BACKGROUND if is_hover else colors.TEXT
+        text_surf = self.font_small.render("Copy", True, text_color)
+        text_rect = text_surf.get_rect(center=self.modal_copy_button_rect.center)
+        self.screen.blit(text_surf, text_rect)
+
+    def _copy_modal_to_clipboard(self):
+        """Copy system prompt to clipboard."""
+        system_prompt = self.controller.decision_maker.system_prompt
+        try:
+            pyperclip.copy(system_prompt)
+            print("[INFO] System prompt copied to clipboard")
+        except Exception as e:
+            print(f"[ERROR] Failed to copy to clipboard: {e}")
 
     def run(self) -> None:
         """Main game loop."""
