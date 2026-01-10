@@ -116,12 +116,21 @@ GENERATORS (base costs - increase exponentially as more are built globally):
 IMPORTANT: Generator costs scale as: current_cost = base_cost × 2^(total_built_globally)
 Example: If 4 MINES exist globally, the 5th costs 80 WOOD + 80 STONE (10×2^4)
 
-TURN STRUCTURE:
-1. TRADING PHASE: Propose up to 2 trades (can skip or stop after first)
-   - If rejected, get ONE chance to retry with different/same partner
-   - Trading rules enforced in prompts
+CRITICAL GAME MECHANICS:
 
-2. BUILD PHASE: Build ONE generator or skip
+RESOURCE GENERATION TIMING:
+- Generators produce resources ONLY at the START of each turn (before trading)
+- During trading, you can ONLY trade resources you CURRENTLY have in your inventory
+- DO NOT assume nations have resources just because they have generators
+- ALWAYS check the "resources" field, NOT the "generators" field
+- Example: If a nation has a FARM generator but "resources": {{"FOOD": 0}}, they have NO FOOD to trade right now
+
+TURN STRUCTURE:
+1. RESOURCE GENERATION: All generators produce resources (automatic)
+2. TRADING PHASE: Propose up to 2 trades using CURRENT resources only
+   - If rejected, get ONE chance to retry with different/same partner
+   - Can only trade what's in your "resources" inventory RIGHT NOW
+3. BUILD PHASE: Build ONE generator using CURRENT resources or skip
 
 You must respond with valid JSON only. No explanations outside the JSON structure."""
 
