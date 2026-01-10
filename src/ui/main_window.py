@@ -66,6 +66,10 @@ class MainWindow:
         self.info_button_rect = None
         self.info_button_hovered = False
 
+        # Game timer
+        self.game_start_time = None  # Will be set when first turn starts
+        self.game_elapsed_seconds = 0
+
         # Async turn execution
         from ..game.async_turn_executor import AsyncTurnExecutor
         self.turn_executor = AsyncTurnExecutor(self.controller)
@@ -285,9 +289,19 @@ class MainWindow:
         self.auto_mode = not self.auto_mode
         self.buttons[0].text = f"Auto: {'ON' if self.auto_mode else 'OFF'}"
 
+        # Start timer if not already started
+        if self.game_start_time is None:
+            import time
+            self.game_start_time = time.time()
+
     def _next_turn(self) -> None:
         """Execute next turn asynchronously."""
         if not self.turn_executor.status.is_busy():
+            # Start timer if not already started
+            if self.game_start_time is None:
+                import time
+                self.game_start_time = time.time()
+
             print(f"\n{'='*60}")
             print(f"Queuing Turn {self.controller.game_state.turn_number}")
             print(f"{'='*60}")
@@ -429,6 +443,11 @@ class MainWindow:
         if self.auto_mode and not is_busy and not game_over:
             self._next_turn()
 
+        # Update game timer
+        if self.game_start_time is not None:
+            import time
+            self.game_elapsed_seconds = int(time.time() - self.game_start_time)
+
         # Update hover states
         mouse_pos = pygame.mouse.get_pos()
         self.info_button_hovered = self.info_button_rect.collidepoint(mouse_pos)
@@ -485,6 +504,9 @@ class MainWindow:
             self.screen, self.controller.game_state, self.width, self.height
         )
 
+        # Draw game timer
+        self._draw_game_timer()
+
         # Draw info button
         self._draw_info_button()
 
@@ -523,6 +545,33 @@ class MainWindow:
             )
 
         pygame.display.flip()
+
+    def _draw_game_timer(self) -> None:
+        """Draw game timer in MM:SS format to the left of info button."""
+        if self.game_start_time is None:
+            return
+
+        # Format time as MM:SS
+        minutes = self.game_elapsed_seconds // 60
+        seconds = self.game_elapsed_seconds % 60
+        time_text = f"{minutes:02d}:{seconds:02d}"
+
+        # Render the timer
+        timer_surface = self.font_medium.render(time_text, True, colors.TEXT)
+        timer_rect = timer_surface.get_rect()
+
+        # Position to the left of info button with some spacing
+        spacing = 15
+        timer_rect.right = self.info_button_rect.left - spacing
+        timer_rect.centery = self.info_button_rect.centery
+
+        # Draw background
+        bg_rect = timer_rect.inflate(20, 10)
+        draw_rounded_rect(self.screen, colors.PRIMARY, bg_rect, border_radius=8)
+        pygame.draw.rect(self.screen, colors.BORDER, bg_rect, 2, border_radius=8)
+
+        # Draw text
+        self.screen.blit(timer_surface, timer_rect)
 
     def _draw_info_button(self) -> None:
         """Draw circular info button."""

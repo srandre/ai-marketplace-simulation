@@ -95,6 +95,12 @@ class GameState(BaseModel):
                 nation.add_generator(generator)
                 self._increment_generator_count(generator_type)
 
+                # Give initial resources based on generator type
+                # Each nation starts with 50 of the resource their generator produces
+                resource_to_add = generator.produces
+                initial_amount = 50
+                nation.inventory.add(resource_to_add, initial_amount)
+
             self.nations.append(nation)
 
         # Initialize relationships between all nations

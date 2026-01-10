@@ -49,12 +49,6 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
         era_name_short = era.get("name", "").replace("Era of ", "")
         unlocked = era.get("unlocked_resources", [])
 
-        # Get emoji mapping
-        resource_emojis = {
-            "GOLD": "💰", "WOOD": "🪵", "STONE": "🪨",
-            "FOOD": "🌾", "TECHNOLOGY": "⚙️", "INFORMATION": "💾"
-        }
-
         if era_idx == 0:
             # First era - list all resources
             resource_text = ", ".join([r for r in unlocked])
@@ -65,7 +59,7 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
             new_resources = [r for r in unlocked if r not in prev_unlocked]
 
             if new_resources:
-                resource_text = "+ " + ", ".join([f"{r} ({resource_emojis.get(r, '❓')})" for r in new_resources])
+                resource_text = "+ " + ", ".join(new_resources)
             else:
                 resource_text = "All resources"
 
@@ -156,12 +150,83 @@ def _format_memory_context(nation) -> str:
     memory_text += "Review your past decisions to maintain strategic consistency:\n\n"
 
     for mem in memory:
-        memory_text += f"Round {mem['round']}, Turn {mem['turn']} - {mem['type']}:\n"
-        memory_text += f"  Decision: {mem['decision']}\n"
-        if mem.get('outcome'):
-            memory_text += f"  Outcome: {mem['outcome']}\n"
-    memory_text += "\n--- END PREVIOUS DECISIONS ---\n"
+        decision = mem.get('decision', {})
+        decision_type = mem.get('type', 'unknown')
 
+        # Format the decision in natural language based on type
+        if decision_type == 'trade_proposal':
+            offering = decision.get('offering', {})
+            requesting = decision.get('requesting', {})
+            target_id = decision.get('target_nation_id')
+
+            # Format resources
+            offering_str = ", ".join([f"{res}={amt}" for res, amt in offering.items()]) if offering else "nothing"
+            requesting_str = ", ".join([f"{res}={amt}" for res, amt in requesting.items()]) if requesting else "nothing"
+
+            # Determine if buying or selling
+            if 'GOLD' in offering:
+                action = f"BUY {requesting_str} from nation {target_id} for {offering_str}"
+            elif 'GOLD' in requesting:
+                action = f"SELL {offering_str} to nation {target_id} for {requesting_str}"
+            else:
+                action = f"Trade {offering_str} with nation {target_id} for {requesting_str}"
+
+            decision_str = f"Attempted to {action}"
+
+        elif decision_type == 'trade_response':
+            decision_val = decision.get('decision', 'UNKNOWN')
+            decision_str = f"{decision_val} a trade offer"
+
+        elif decision_type == 'build':
+            if decision.get('build'):
+                gen_type = decision.get('generator_type', 'unknown')
+                payment_res = decision.get('payment_resource')
+                if payment_res:
+                    decision_str = f"Built {gen_type} (paid with {payment_res})"
+                else:
+                    decision_str = f"Built {gen_type}"
+            else:
+                decision_str = "Skipped building (couldn't afford or chose not to)"
+
+        elif decision_type == 'alternative_trade':
+            if decision.get('retry'):
+                offering = decision.get('offering', {})
+                requesting = decision.get('requesting', {})
+                target_id = decision.get('target_nation_id')
+
+                offering_str = ", ".join([f"{res}={amt}" for res, amt in offering.items()]) if offering else "nothing"
+                requesting_str = ", ".join([f"{res}={amt}" for res, amt in requesting.items()]) if requesting else "nothing"
+
+                if 'GOLD' in offering:
+                    action = f"BUY {requesting_str} from nation {target_id} for {offering_str}"
+                elif 'GOLD' in requesting:
+                    action = f"SELL {offering_str} to nation {target_id} for {requesting_str}"
+                else:
+                    action = f"Trade {offering_str} with nation {target_id} for {requesting_str}"
+
+                decision_str = f"Retried trade: {action}"
+            else:
+                decision_str = "Gave up on finding alternative trade partner"
+        else:
+            decision_str = f"Made decision: {decision}"
+
+        memory_text += f"Round {mem['round']}, Turn {mem['turn']}: {decision_str}\n"
+
+        # Add outcome if available
+        if mem.get('outcome'):
+            outcome = mem['outcome']
+            if 'Trade invalid' in outcome:
+                memory_text += f"  Result: FAILED - {outcome}\n"
+            elif 'Trade accepted' in outcome or 'Trade executed' in outcome:
+                memory_text += f"  Result: SUCCESS - {outcome}\n"
+            elif 'Trade rejected' in outcome:
+                memory_text += f"  Result: REJECTED - {outcome}\n"
+            else:
+                memory_text += f"  Result: {outcome}\n"
+
+        memory_text += "\n"
+
+    memory_text += "--- END PREVIOUS DECISIONS ---\n"
     memory_text += "Use this history to inform your current strategy and maintain consistency.\n"
     return memory_text
 
@@ -188,9 +253,9 @@ def _format_nation_summary(nation_data: Dict[str, Any]) -> str:
             tradeable_now.append(f"{res}={amt}")
 
     if not tradeable_now:
-        has_now = "❌ NOTHING! Cannot trade with them!"
+        has_now = "NOTHING! Cannot trade with them!"
     else:
-        has_now = "✅ " + ", ".join(tradeable_now)
+        has_now = ", ".join(tradeable_now)
 
     # List what they WILL PRODUCE (generators)
     gen_parts = []
@@ -200,9 +265,9 @@ def _format_nation_summary(nation_data: Dict[str, Any]) -> str:
         gen_parts.append(f"{gen_type} (will produce {produces} next turn)")
 
     if gen_parts:
-        will_produce = "🏭 " + ", ".join(gen_parts)
+        will_produce = ", ".join(gen_parts)
     else:
-        will_produce = "🏭 No generators"
+        will_produce = "No generators"
 
     return f"""{name}:
       HAS NOW: {has_now}
@@ -219,12 +284,31 @@ def create_trading_phase_prompt(
 
     # Build natural language game state summary
 
-    # Your nation info
-    your_res = _format_resources_natural(nation.inventory.to_dict())
-    your_gens = []
+    # Your nation info - format like other nations for consistency
+    your_res_dict = nation.inventory.to_dict()
+
+    # List what YOU have NOW (tradeable)
+    your_tradeable = []
+    for res, amt in your_res_dict.items():
+        if amt > 0:
+            your_tradeable.append(f"{res}={amt}")
+
+    if not your_tradeable:
+        your_has_now = "NOTHING! You cannot trade!"
+    else:
+        your_has_now = ", ".join(your_tradeable)
+
+    # List what YOU will produce (generators)
+    your_gen_parts = []
     for g in nation.generators:
-        your_gens.append(f"{g.generator_type.value} (→{g.generation_amount} {g.produces.value}/turn)")
-    your_gens_str = ", ".join(your_gens) if your_gens else "None"
+        gen_type = g.generator_type.value
+        produces = g.produces.value
+        your_gen_parts.append(f"{gen_type} (will produce {produces} next turn)")
+
+    if your_gen_parts:
+        your_will_produce = ", ".join(your_gen_parts)
+    else:
+        your_will_produce = "No generators"
 
     # Goal info
     goal_parts = []
@@ -316,35 +400,25 @@ Respond with JSON (keep reasoning ≤3 sentences):
     "reasoning": "I need X. [Name] has Y and [GENERATOR]. Buying/Selling/Skipping." (this should ABSOLUTELY match what's answered in the other properties)
 }}
 
-GOOD examples - Notice how they read "HAS NOW" section:
-- Nation shows "HAS NOW: ✅ WOOD=80, STONE=60" → {{"trade": true, "offering": {{"GOLD": 100}}, "requesting": {{"WOOD": 50, "STONE": 50}}, "reasoning": "USA HAS NOW 80 WOOD and 60 STONE. Buying for 100 GOLD."}}
-- Nation shows "HAS NOW: ✅ GOLD=60" → {{"trade": true, "offering": {{"FOOD": 30}}, "requesting": {{"GOLD": 50}}, "reasoning": "Iran HAS NOW 60 GOLD. Selling FOOD for 50 GOLD."}}
-- All nations show "HAS NOW: ❌ NOTHING!" → {{"trade": false, "reasoning": "No nation has tradeable resources now. Skipping."}}
-
-BAD examples - These IGNORE what nation "HAS NOW":
-- Nation shows "HAS NOW: ❌ NOTHING!" but "WILL PRODUCE: MINE" → {{"trade": true, "offering": {{"FOOD": 50}}, "requesting": {{"GOLD": 50}}, "reasoning": "Egypt has MINE."}} ← WRONG! Egypt HAS NOW nothing - MINE only produces next turn!
-- Nation shows "HAS NOW: ✅ STONE=50" but "WILL PRODUCE: MINE" → {{"trade": true, "offering": {{"WOOD": 50}}, "requesting": {{"GOLD": 50}}, "reasoning": "Colombia has 50 GOLD and MINE."}} ← WRONG! Colombia HAS NOW STONE=50, not GOLD!
-- {{"offering": {{"WOOD": 50}}, "requesting": {{"STONE": 30}}}} ← WRONG! One side MUST be GOLD
-
-====================================================================================================
+________________________________________________________________________________
 CURRENT GAME STATE:
 
 YOUR NATION: {nation.name}
-  Current Resources: {your_res}
-  Generators: {your_gens_str}
+  HAS NOW: {your_has_now}
+  WILL PRODUCE: {your_will_produce}
 
 YOUR GOAL: Advance to Era {nation.era.value + 1}
   Requirements: {goal_str}
 
-════════════════════════════════════════════════════════════════════════════════
+________________________________________________________________________________
 OTHER NATIONS - READ "HAS NOW" CAREFULLY! That's what you can trade for RIGHT NOW!
 (Generators only show what they'll produce NEXT turn - you CANNOT trade for future production!)
-════════════════════════════════════════════════════════════════════════════════
+________________________________________________________________________________
 {other_nations_str}
 
 {memory_context}
 {complement_note}
-===================================================================================================="""
+________________________________________________________________________________"""
 
     return prompt
 
@@ -416,18 +490,7 @@ Respond with JSON (keep reasoning ≤2 sentences):
     "reasoning": "What I have, what it costs, decision." (this should ABSOLUTELY match what's answered in the other properties)
 }}
 
-GOOD examples:
-- "I have 80 WOOD, 80 STONE. MINE costs 80+80. Building MINE."
-- "I have 40 STONE. FARM costs 40. Paying with STONE. Building FARM."
-- "I have 30 WOOD, 25 STONE. FARM costs 40. Cannot afford. Skipping."
-
-BAD examples:
-- Reasoning says "skip" but build: true (must match!)
-- Reasoning says "build FARM" but generator_type: "MINE" (must match!)
-- Not checking if you can afford it
-- Long rambling analysis (keep it ≤2 sentences!)
-
-====================================================================================================
+________________________________________________________________________________
 CURRENT GAME STATE:
 
 YOUR NATION: {nation.name}
@@ -441,7 +504,7 @@ GENERATOR COSTS (current prices):
 {costs_str}
 
 {memory_context}
-===================================================================================================="""
+________________________________________________________________________________"""
 
     return prompt
 
@@ -509,12 +572,7 @@ Respond with JSON (keep reasoning ≤2 sentences):
     "reasoning": "They request X. I have [amount] and [GENERATOR]. Accepting/Rejecting." (this should ABSOLUTELY match what's answered in the other properties)
 }}
 
-GOOD examples (notice they always mention their generator!):
-- "They request 50 GOLD. I have 50 GOLD and MINE. Accepting."
-- "They request 50 WOOD. I have 50 WOOD but no LUMBER_CAMP. Rejecting."
-- "They request 80 STONE. I have 100 STONE and QUARRY. Accepting."
-
-====================================================================================================
+________________________________________________________________________________
 CURRENT SITUATION:
 
 YOUR NATION: {nation.name}
@@ -526,7 +584,7 @@ TRADE OFFER:
   They want from you: {requesting_str}
 
 {memory_context}
-===================================================================================================="""
+________________________________________________________________________________"""
 
     return prompt
 
@@ -565,6 +623,9 @@ def create_alternative_trade_prompt(
         alt_lines.append(f"  {other['id']}. {nation_summary}")
     alt_str = "\n".join(alt_lines) if alt_lines else "  (No alternatives available)"
 
+    # Add memory context
+    memory_context = _format_memory_context(nation)
+
     prompt = f"""TRADE REJECTED by {rejected_nation_name}
 
 OPTIONS:
@@ -600,15 +661,7 @@ Respond with JSON (keep reasoning ≤3 sentences):
     "reasoning": "What I have, what they have, decision." (this should ABSOLUTELY match what's answered in the other properties)
 }}
 
-GOOD examples:
-- {{"retry": true, "target_nation_id": 2, "offering": {{"GOLD": 100}}, "requesting": {{"WOOD": 60, "STONE": 40}}, "reasoning": "I have 100 GOLD. USA has both. Retrying."}}
-- {{"retry": false, "target_nation_id": null, "offering": {{}}, "requesting": {{}}, "reasoning": "No nation has what I need. Skipping."}}
-
-BAD examples:
-- {{"offering": {{"GOLD": 50, "WOOD": 30}}, ...}} ← WRONG! Can't mix gold with resources
-- {{"offering": {{"WOOD": 50}}, "requesting": {{"STONE": 30}}}} ← WRONG! One side MUST be GOLD
-
-====================================================================================================
+________________________________________________________________________________
 CURRENT SITUATION:
 
 YOUR NATION: {nation.name}
@@ -620,6 +673,8 @@ REJECTED TRADE:
 
 ALTERNATIVE PARTNERS (check their resources!):
 {alt_str}
-===================================================================================================="""
+
+{memory_context}
+________________________________________________________________________________"""
 
     return prompt

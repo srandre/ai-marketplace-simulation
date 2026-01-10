@@ -19,9 +19,9 @@ class Generator(BaseModel):
     generation_amount: int = Field(default=10)
     required_era: int = Field(default=0)
 
-    def generate(self, era_multiplier: int = 1) -> int:
-        """Generate resources based on era multiplier."""
-        return self.generation_amount * era_multiplier
+    def generate(self) -> int:
+        """Generate resources."""
+        return self.generation_amount
 
     class Config:
         """Pydantic configuration."""

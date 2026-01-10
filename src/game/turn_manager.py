@@ -30,10 +30,7 @@ class TurnManager:
 
     def _generate_resources(self, nation) -> None:
         """Generate resources from all generators."""
-        era_config = self.game_state.get_era_config(nation.era)
-        era_multiplier = era_config.get("generation_multiplier", 1)
-
-        generated = nation.generate_resources(era_multiplier)
+        generated = nation.generate_resources()
 
         if generated:
             from ..ui.resource_display import format_resources_dict

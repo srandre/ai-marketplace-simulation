@@ -37,7 +37,7 @@ class Nation(BaseModel):
         """Add a generator to the nation."""
         self.generators.append(generator)
 
-    def generate_resources(self, era_multiplier: int) -> Dict[ResourceType, int]:
+    def generate_resources(self) -> Dict[ResourceType, int]:
         """
         Generate resources from all generators.
 
@@ -47,7 +47,7 @@ class Nation(BaseModel):
 
         for generator in self.generators:
             resource_type = generator.produces
-            amount = generator.generate(era_multiplier)
+            amount = generator.generate()
 
             if resource_type not in generated:
                 generated[resource_type] = 0
