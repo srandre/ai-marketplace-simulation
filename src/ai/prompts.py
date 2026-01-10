@@ -599,17 +599,10 @@ MARKET DYNAMICS - EVALUATING OFFERS (ERA-RELATIVE):
    - Demand better rates or REJECT
    - Example: You need WOOD but they're offering STONE → REJECT or COUNTER
 
-3. FAIR VALUE REFERENCE (adjust based on scarcity):
-   - 1 WOOD ≈ 1.5-2 GOLD (baseline)
-   - 1 STONE ≈ 1.5-2 GOLD (baseline)
-   - 1 FOOD ≈ 1.5-2 GOLD (baseline)
-   - 1 TECHNOLOGY ≈ 2-3 GOLD (baseline)
-   - 1 INFORMATION ≈ 2-3 GOLD (baseline)
-
    When YOU are abundant in what they want: Accept 1.2-1.5x rates (generous)
    When YOU are scarce in what they want: Demand 2-2.5x rates (premium)
 
-4. EXAMPLES OF MARKET-AWARE RESPONSES (ERA-RELATIVE):
+3. EXAMPLES OF MARKET-AWARE RESPONSES (ERA-RELATIVE):
    ✓ GOOD (Era 0): "They want 80 GOLD for 50 WOOD. I have 300 GOLD (6x of 50 = abundant) and need WOOD urgently. Fair deal. ACCEPT."
    ✓ GOOD (Era 1): "They want 300 STONE for 400 GOLD. I have 750 STONE (1.5x of 500 = limited). This undervalues my limited supply. COUNTER for 200 STONE or 600 GOLD."
    ✓ GOOD (Era 2): "They want 2000 GOLD for 1200 WOOD. I have 7000 GOLD (1.4x of 5000 = limited) and need to save for building. REJECT."
