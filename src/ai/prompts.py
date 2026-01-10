@@ -304,6 +304,12 @@ STRATEGY:
 - Which generator produces what I need?
 - Can I afford it with my current resources?
 
+IMPORTANT - GOLD IS CRITICAL:
+- MINE produces GOLD (needed for all trades!)
+- Without GOLD, you cannot BUY resources from other nations
+- GOLD unlocks trading opportunities - prioritize MINE if you can afford it
+- All era requirements include GOLD
+
 Respond with JSON (keep reasoning ≤2 sentences):
 {{
     "build": true/false,
