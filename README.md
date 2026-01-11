@@ -122,7 +122,7 @@ When a nation advances eras, all existing generators immediately update to the n
 3. If rejected, initiator may retry with different partner or end trading phase
 4. Both nations must possess offered resources for trade to execute
 
-Relationship values between nations adjust based on trade outcomes (+1 for successful trades, -1 for failed negotiations).
+Relationship values between nations adjust based on trade outcomes (+1 for successful trades, -1 for failed negotiations), and should influence AI's decisions on offering, accepting or rejecting trades.
 
 ### AI Decision Framework
 
