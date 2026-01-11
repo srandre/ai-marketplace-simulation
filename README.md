@@ -7,6 +7,44 @@ A turn-based strategy simulation where AI-controlled nations compete to advance 
 Ten nations compete simultaneously to reach the final era (Era of Domination) by accumulating resources and strategically trading with rivals. The first nation to go from Era 0 to Era 3, meeting every resource requirements to advance, wins the game.
 A match may usually take up to one hour to finish with a winner.
 
+## Installation
+
+### Requirements
+
+- Python 3.10 or higher
+- DeepSeek API key (obtain from [platform.deepseek.com](https://platform.deepseek.com/))
+
+### Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd ai-marketplace-simulation
+
+# Create and activate virtual environment
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Linux/Mac
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure API key
+echo "DEEPSEEK_API_KEY=your_api_key_here" > .env
+```
+
+## Usage
+
+Run the simulation:
+
+```bash
+python -m src.main
+```
+
 ## Core Mechanics
 
 ### Turn Structure
@@ -100,44 +138,6 @@ Each nation uses DeepSeek AI to make autonomous decisions with access to:
 2. Trade response - Should I accept this incoming trade offer?
 3. Alternative trade - Trade rejected, retry with different partner or skip?
 4. Build phase - Which generator to build given current resources and goals?
-
-## Installation
-
-### Requirements
-
-- Python 3.10 or higher
-- DeepSeek API key (obtain from [platform.deepseek.com](https://platform.deepseek.com/))
-
-### Setup
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd ai-marketplace-simulation
-
-# Create and activate virtual environment
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure API key
-echo "DEEPSEEK_API_KEY=your_api_key_here" > .env
-```
-
-## Usage
-
-Run the simulation:
-
-```bash
-python -m src.main
-```
 
 ### Controls
 
