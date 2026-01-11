@@ -4,7 +4,8 @@ A turn-based strategy simulation where AI-controlled nations compete to advance 
 
 ## Overview
 
-Ten nations compete simultaneously to reach the final era (Era of Domination) by accumulating resources and strategically trading with rivals. The first nation to meet Era 3 advancement requirements and transition to Era 4 wins the game.
+Ten nations compete simultaneously to reach the final era (Era of Domination) by accumulating resources and strategically trading with rivals. The first nation to go from Era 0 to Era 3, meeting every resource requirements to advance, wins the game.
+A match may usually take up to one hour to finish with a winner.
 
 ## Core Mechanics
 
@@ -77,17 +78,13 @@ When a nation advances eras, all existing generators immediately update to the n
 - GOLD for resources (e.g., 50 GOLD → 50 WOOD + 30 STONE)
 - Resources for GOLD (e.g., 50 WOOD + 30 STONE → 50 GOLD)
 
-**Invalid Trades:**
-- Mixing GOLD with resources on the same side
-- Same resource on both sides (e.g., GOLD for GOLD)
-
 **Trade Execution:**
 1. Initiator proposes trade
 2. AI responder evaluates and returns ACCEPT or REJECT
 3. If rejected, initiator may retry with different partner or end trading phase
 4. Both nations must possess offered resources for trade to execute
 
-Relationship values adjust based on trade outcomes (+1 for successful trades, -1 for failed negotiations).
+Relationship values between nations adjust based on trade outcomes (+1 for successful trades, -1 for failed negotiations).
 
 ### AI Decision Framework
 
@@ -160,9 +157,8 @@ Edit `config/game_config.yaml` for customization.
 
 ```yaml
 game:
-  num_players: 10        # Number of nations (1-50)
+  num_players: 10        # Number of nations at play
   initial_era: 0         # Starting era (0-2)
-  initial_turn_number: 1
 ```
 
 ### Era Definitions
@@ -239,7 +235,7 @@ ai-marketplace-simulation/
 ├── config/
 │   └── game_config.yaml
 ├── assets/
-│   └── flags/
+│   └── flags/                     # Country flags used for UI
 └── .env                           # API credentials (not tracked)
 ```
 
@@ -252,7 +248,7 @@ The game maintains comprehensive logs for all events:
 - **Construction** - Generator builds with resource costs
 - **Generation** - Turn-start resource production from all generators
 - **Era Progression** - Automatic advancements when thresholds met
-- **Victory** - Game conclusion when first nation reaches Era 4
+- **Victory** - Game conclusion when first nation reaches Era of Domination
 
 **Log Detail View:**
 
@@ -276,7 +272,7 @@ Click any log entry to inspect:
 Understanding the following mechanics improves AI performance when tuning prompts:
 
 1. **Early Mine Construction**: GOLD serves as universal trading currency, making Mines critical for economic flexibility
-2. **Generator Lifetime Value**: Generators built early benefit from era scaling (a Mine built in Era 0 eventually produces 1000x its initial output in Era 3)
+2. **Generator Lifetime Value**: Generators built early benefit from era scaling (a Mine built in Era 0 eventually produces 1000x its initial output in Era 2)
 3. **Progressive Pricing Impact**: First generator of each type costs base price, fifth costs 16x base, tenth costs 512x base
 4. **Generator Trading**: Nations with specific generators can trade surplus production of that resource
 5. **Forward Planning**: Building Factories in Era 1 prepares TECHNOLOGY stockpiles needed for Era 2 advancement
@@ -289,12 +285,4 @@ The game ends when any nation meets the Era 3 advancement requirements at turn s
 - 20,000 TECHNOLOGY
 - 10,000 INFORMATION
 
-Meeting these thresholds triggers automatic advancement to Era of Domination (Era 4), ending the game with that nation declared winner.
-
-## License
-
-This project is released under the MIT License. See LICENSE file for full terms.
-
-## Contributing
-
-Contributions are welcome. Please open an issue for discussion before submitting significant changes via pull request.
+Meeting these thresholds triggers automatic advancement to Era of Domination, ending the game with that nation declared winner.
