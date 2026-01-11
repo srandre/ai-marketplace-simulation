@@ -14,6 +14,15 @@ A match may usually take up to one hour to finish with a winner.
 - Python 3.10 or higher
 - DeepSeek API key (obtain from [platform.deepseek.com](https://platform.deepseek.com/))
 
+## Technology Stack
+
+- **Python 3.10+** - Core implementation language
+- **Pygame 2.5+** - Rendering and UI framework
+- **DeepSeek AI** - Language model for strategic decision-making
+- **Pydantic 2.0+** - Runtime type validation and data serialization
+- **PyYAML** - Configuration file parsing
+- **python-dotenv** - Environment variable management
+
 ### Setup
 
 ```bash
@@ -257,15 +266,6 @@ Click any log entry to inspect:
 - Full JSON response with decision and reasoning
 - Affected nations and resource changes
 - Turn/round timestamps
-
-## Technology Stack
-
-- **Python 3.10+** - Core implementation language
-- **Pygame 2.5+** - Rendering and UI framework
-- **DeepSeek AI** - Language model for strategic decision-making
-- **Pydantic 2.0+** - Runtime type validation and data serialization
-- **PyYAML** - Configuration file parsing
-- **python-dotenv** - Environment variable management
 
 ## Strategy Considerations
 
