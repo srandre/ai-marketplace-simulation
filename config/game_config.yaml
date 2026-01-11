@@ -2,7 +2,6 @@
 
 game:
   num_players: 10
-  initial_turn_number: 1
   initial_era: 0  # Starting era for all players (0=Origin, 1=Structuring, 2=Information)
 
 eras:
