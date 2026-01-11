@@ -69,6 +69,9 @@ class MainWindow:
         # Game timer
         self.game_start_time = None  # Will be set when first turn starts
         self.game_elapsed_seconds = 0
+        self.game_timer_paused = False
+        self.game_pause_start = None
+        self.total_paused_time = 0
 
         # Async turn execution
         from ..game.async_turn_executor import AsyncTurnExecutor
@@ -294,6 +297,19 @@ class MainWindow:
             import time
             self.game_start_time = time.time()
 
+        # Handle pause/resume
+        import time
+        if self.auto_mode:
+            # Resuming - add paused duration to total
+            if self.game_pause_start is not None:
+                self.total_paused_time += time.time() - self.game_pause_start
+                self.game_pause_start = None
+            self.game_timer_paused = False
+        else:
+            # Pausing
+            self.game_pause_start = time.time()
+            self.game_timer_paused = True
+
     def _next_turn(self) -> None:
         """Execute next turn asynchronously."""
         if not self.turn_executor.status.is_busy():
@@ -446,7 +462,10 @@ class MainWindow:
         # Update game timer
         if self.game_start_time is not None:
             import time
-            self.game_elapsed_seconds = int(time.time() - self.game_start_time)
+            current_paused = 0
+            if self.game_pause_start is not None:
+                current_paused = time.time() - self.game_pause_start
+            self.game_elapsed_seconds = int(time.time() - self.game_start_time - self.total_paused_time - current_paused)
 
         # Update hover states
         mouse_pos = pygame.mouse.get_pos()

@@ -588,7 +588,7 @@ ACCEPT if you have a generator for what they request!
 
 Only REJECT if:
 - You don't have what they request, OR
-- You don't have a generator for it (you won't get it back)
+- You can't spare it (need for era requirements) and don't have a generator for it (you won't get it back)
 
 Respond with JSON (keep reasoning <=2 sentences):
 {{
