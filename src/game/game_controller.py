@@ -227,7 +227,6 @@ class GameController:
                     nations_involved=[nation.id, target_id],
                     details={"offer": trade_offer.to_dict(), "reason": f"{nation.name} has insufficient resources to offer"},
                 )
-                print(f"[TRADE FAILED] {nation.name} lacks resources: offered {offering}, has {nation.inventory.to_dict()}")
                 return "INVALID"
 
         # Propose trade
@@ -390,12 +389,12 @@ class GameController:
 
             # Validate that offering and requesting are provided
             if not new_offering or not new_requesting:
-                print(f"[WARNING] AI retry decision missing offering or requesting. Using original trade.")
+                print(f"[WARNING R{self.game_state.round_number}.T{self.game_state.turn_number}] AI retry decision missing offering or requesting. Using original trade.")
                 new_offering = offering
                 new_requesting = requesting
             # Validate that the AI didn't select the same nation that rejected the trade
             if new_target_id == rejected_target_id:
-                print(f"[WARNING] AI selected the same nation ({target_nation_name}) that rejected the trade. Ignoring retry.")
+                print(f"[WARNING R{self.game_state.round_number}.T{self.game_state.turn_number}] AI selected the same nation ({target_nation_name}) that rejected the trade. Ignoring retry.")
                 # Log the decision to skip retry
                 log_entry = self.game_state.game_log.add_entry(
                     log_type=LogType.AI_DECISION,

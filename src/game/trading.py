@@ -38,12 +38,6 @@ class TradingManager:
             print(f"  REASON: Trade must be GOLD for ONE resource OR ONE resource for GOLD (no multiple resources allowed)")
             return None
 
-        # Check if initiator has the resources they're offering
-        if not initiator.inventory.has_multiple(offer.offering):
-            print(f"[TRADE FAILED] {initiator.name} lacks resources to offer: {offer.offering}")
-            print(f"  Current inventory: {initiator.inventory.to_dict()}")
-            return None
-
         # Create transaction
         transaction = Transaction(
             initiator_id=initiator_id,

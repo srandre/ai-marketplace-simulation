@@ -10,10 +10,18 @@ def draw_rounded_rect(
     surface: pygame.Surface,
     color: tuple[int, int, int],
     rect: pygame.Rect,
-    border_radius: int = 10
+    border_radius: int = 10,
+    alpha: int = 255
 ) -> None:
-    """Draw a rounded rectangle."""
-    pygame.draw.rect(surface, color, rect, border_radius=border_radius)
+    """Draw a rounded rectangle with optional transparency."""
+    if alpha < 255:
+        # Create a temporary surface with per-pixel alpha
+        temp_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        temp_rect = pygame.Rect(0, 0, rect.width, rect.height)
+        pygame.draw.rect(temp_surface, (*color, alpha), temp_rect, border_radius=border_radius)
+        surface.blit(temp_surface, rect.topleft)
+    else:
+        pygame.draw.rect(surface, color, rect, border_radius=border_radius)
 
 
 def draw_rounded_rect_border(
@@ -61,17 +69,17 @@ class Button:
     def draw(self, screen: pygame.Surface, font: pygame.font.Font) -> None:
         """Draw the button."""
         if not self.enabled:
-            bg_color = colors.SECONDARY
+            bg_color = colors.BUTTON_DISABLED_GREY
             text_color = colors.TEXT_SECONDARY
         elif self.hovered:
-            bg_color = colors.HOVER
+            bg_color = colors.BUTTON_HOVER_GREY
             text_color = colors.TEXT
         else:
-            bg_color = colors.PRIMARY
+            bg_color = colors.BUTTON_GREY
             text_color = colors.TEXT
 
-        draw_rounded_rect(screen, bg_color, self.rect, border_radius=8)
-        draw_rounded_rect_border(screen, colors.BORDER, self.rect, width=2, border_radius=8)
+        draw_rounded_rect(screen, bg_color, self.rect, border_radius=8, alpha=colors.PANEL_ALPHA)
+        draw_rounded_rect_border(screen, colors.PANEL_BORDER_GREY, self.rect, width=2, border_radius=8)
 
         text_surf = font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
@@ -87,8 +95,8 @@ class Panel:
 
     def draw(self, screen: pygame.Surface, font: pygame.font.Font) -> None:
         """Draw the panel."""
-        draw_rounded_rect(screen, colors.SECONDARY, self.rect, border_radius=10)
-        draw_rounded_rect_border(screen, colors.BORDER, self.rect, width=2, border_radius=10)
+        draw_rounded_rect(screen, colors.PANEL_GREY, self.rect, border_radius=10, alpha=colors.PANEL_ALPHA)
+        draw_rounded_rect_border(screen, colors.PANEL_BORDER_GREY, self.rect, width=2, border_radius=10)
 
         if self.title:
             title_surf = font.render(self.title, True, colors.TEXT)
@@ -132,8 +140,8 @@ class ScrollableList:
     def draw(self, screen: pygame.Surface, font: pygame.font.Font) -> None:
         """Draw the scrollable list."""
         # Create a surface for clipping
-        list_surface = pygame.Surface((self.rect.width, self.rect.height))
-        list_surface.fill(colors.SECONDARY)
+        list_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        list_surface.fill((*colors.PANEL_GREY, colors.PANEL_ALPHA))
 
         y_pos = -self.scroll_offset
         for i, item in enumerate(self.items):
@@ -141,9 +149,9 @@ class ScrollableList:
                 item_rect = pygame.Rect(0, y_pos, self.rect.width, self.item_height)
 
                 if i == self.selected_index:
-                    pygame.draw.rect(list_surface, colors.HOVER, item_rect)
+                    pygame.draw.rect(list_surface, (*colors.BUTTON_HOVER_GREY, colors.PANEL_ALPHA), item_rect)
                 elif i % 2 == 0:
-                    pygame.draw.rect(list_surface, colors.PRIMARY, item_rect)
+                    pygame.draw.rect(list_surface, (*colors.BUTTON_GREY, colors.PANEL_ALPHA), item_rect)
 
                 pygame.draw.rect(list_surface, colors.BORDER, item_rect, 1)
 

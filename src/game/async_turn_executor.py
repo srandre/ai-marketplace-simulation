@@ -187,7 +187,7 @@ class AsyncTurnExecutor:
                                 details={"reason": "Insufficient resources or invalid offer"}
                             )
                             trade_summaries.append(f"trade failed: insufficient resources")
-                            print(f"[WARNING] {current_nation.name} proposed invalid trade to {target_nation.name} (insufficient resources)")
+                            print(f"[WARNING R{self.controller.game_state.round_number}.T{self.controller.game_state.turn_number}] {current_nation.name} proposed invalid trade to {target_nation.name} (insufficient resources)")
                         elif result == "REJECTED":
                             trade_summaries.append(f"trade rejected by {target_nation.name}")
 

@@ -31,8 +31,8 @@ class TooltipRenderer:
 
         # Draw tooltip background
         tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
-        draw_rounded_rect(screen, colors.SECONDARY, tooltip_rect, border_radius=8)
-        draw_rounded_rect_border(screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
+        draw_rounded_rect(screen, colors.PANEL_GREY, tooltip_rect, border_radius=8, alpha=colors.PANEL_ALPHA)
+        draw_rounded_rect_border(screen, colors.PANEL_BORDER_GREY, tooltip_rect, width=2, border_radius=8)
 
         # Draw tooltip text
         screen.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))
@@ -79,8 +79,8 @@ class TooltipRenderer:
 
         # Draw tooltip background
         tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
-        draw_rounded_rect(screen, colors.SECONDARY, tooltip_rect, border_radius=8)
-        draw_rounded_rect_border(screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
+        draw_rounded_rect(screen, colors.PANEL_GREY, tooltip_rect, border_radius=8, alpha=colors.PANEL_ALPHA)
+        draw_rounded_rect_border(screen, colors.PANEL_BORDER_GREY, tooltip_rect, width=2, border_radius=8)
 
         # Draw text lines
         y = tooltip_y + padding
@@ -111,6 +111,6 @@ class TooltipRenderer:
 
         # Draw tooltip
         tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
-        draw_rounded_rect(screen, colors.SECONDARY, tooltip_rect, border_radius=8)
-        draw_rounded_rect_border(screen, colors.ACCENT, tooltip_rect, width=2, border_radius=8)
+        draw_rounded_rect(screen, colors.PANEL_GREY, tooltip_rect, border_radius=8, alpha=colors.PANEL_ALPHA)
+        draw_rounded_rect_border(screen, colors.PANEL_BORDER_GREY, tooltip_rect, width=2, border_radius=8)
         screen.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))

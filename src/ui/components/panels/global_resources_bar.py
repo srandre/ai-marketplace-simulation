@@ -31,8 +31,8 @@ class GlobalResourcesBar:
         x = button_spacing * 3 + button_width * 2 + 40
         y = screen_height - 60
 
-        # Draw "Global Resources" label
-        label = self.font_small.render("Global Resources:", True, colors.TEXT_SECONDARY)
+        # Draw "Global Resources" label with dark color for vintage background
+        label = self.font_small.render("Global Resources:", True, colors.BACKGROUND_TEXT)
         screen.blit(label, (x, y - 5))
 
         # Clear previous rects
@@ -43,7 +43,7 @@ class GlobalResourcesBar:
             total = totals[rt]
             emoji = get_resource_emoji(rt)
             resource_text = f"{emoji}{total}"
-            text = self.font_small.render(resource_text, True, colors.TEXT)
+            text = self.font_small.render(resource_text, True, colors.BACKGROUND_TEXT)
 
             # Store rectangle for hover detection
             text_rect = text.get_rect(topleft=(x, y + 15))

@@ -79,7 +79,7 @@ class ScrollbarManager:
                                                  top_offset, bottom_offset)
 
         # Draw scrollbar background
-        draw_rounded_rect(screen, colors.SECONDARY, scrollbar_rect, border_radius=6)
+        draw_rounded_rect(screen, colors.PANEL_GREY, scrollbar_rect, border_radius=6, alpha=150)
 
         # Calculate thumb size and position
         scrollbar_height = scrollbar_rect.height
@@ -93,4 +93,4 @@ class ScrollbarManager:
 
         # Draw scrollbar thumb
         thumb_rect = pygame.Rect(scrollbar_rect.x, thumb_y, width, thumb_height)
-        draw_rounded_rect(screen, colors.TEXT_SECONDARY, thumb_rect, border_radius=6)
+        draw_rounded_rect(screen, colors.PANEL_BORDER_GREY, thumb_rect, border_radius=6, alpha=200)

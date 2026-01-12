@@ -107,8 +107,8 @@ class SystemPromptModal:
         modal_rect = self.get_modal_rect(screen_width, screen_height)
 
         # Draw modal background
-        draw_rounded_rect(screen, colors.SECONDARY, modal_rect, border_radius=15)
-        draw_rounded_rect_border(screen, colors.ACCENT, modal_rect, width=3, border_radius=15)
+        draw_rounded_rect(screen, colors.PANEL_GREY, modal_rect, border_radius=15, alpha=colors.PANEL_ALPHA)
+        draw_rounded_rect_border(screen, colors.PANEL_BORDER_GREY, modal_rect, width=3, border_radius=15)
 
         # Draw title
         title_text = self.font_large.render("System Prompt", True, colors.ACCENT)

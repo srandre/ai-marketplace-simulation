@@ -31,6 +31,9 @@ class MainWindow:
         self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
         pygame.display.set_caption("Rise of AI: Strategic Resource Game")
 
+        # Load background image
+        self.background_image = self._load_background_image()
+
         # Maximize the window (platform-specific)
         import ctypes
         try:
@@ -45,6 +48,7 @@ class MainWindow:
         # Fonts - use system font that supports emojis
         emoji_font = self._get_emoji_font()
         self.font_small = pygame.font.SysFont(emoji_font, 18)
+        self.font_small_bold = pygame.font.SysFont(emoji_font, 18, bold=True)
         self.font_medium = pygame.font.SysFont(emoji_font, 24)
         self.font_large = pygame.font.SysFont(emoji_font, 32)
         self.font_title = pygame.font.SysFont(emoji_font, 48)
@@ -114,6 +118,26 @@ class MainWindow:
                 return font
 
         return None
+
+    def _load_background_image(self) -> Optional[pygame.Surface]:
+        """Load and scale the background image."""
+        from pathlib import Path
+
+        project_root = Path(__file__).parent.parent.parent
+        bg_path = project_root / "assets" / "bg.jpg"
+
+        if bg_path.exists():
+            try:
+                bg_img = pygame.image.load(str(bg_path))
+                # Scale to fit screen
+                bg_img = pygame.transform.scale(bg_img, (self.width, self.height))
+                return bg_img
+            except Exception as e:
+                print(f"Error loading background image: {e}")
+                return None
+        else:
+            print(f"Background image not found: {bg_path}")
+            return None
 
     def _load_flag_images(self) -> dict:
         """Load flag images from assets/flags directory."""
@@ -340,6 +364,8 @@ class MainWindow:
                 self.width = event.w
                 self.height = event.h
                 self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+                # Rescale background image
+                self.background_image = self._load_background_image()
                 self._setup_ui()
 
             # Handle mouse clicks
@@ -483,7 +509,11 @@ class MainWindow:
 
     def draw(self) -> None:
         """Draw the game window."""
-        self.screen.fill(colors.BACKGROUND)
+        # Draw background image or fallback color
+        if self.background_image:
+            self.screen.blit(self.background_image, (0, 0))
+        else:
+            self.screen.fill(colors.BACKGROUND)
 
         # Draw panel backgrounds
         self.nations_panel.draw_panel_background(self.screen, self.font_medium)
@@ -583,8 +613,8 @@ class MainWindow:
 
         # Draw background
         bg_rect = timer_rect.inflate(20, 10)
-        draw_rounded_rect(self.screen, colors.PRIMARY, bg_rect, border_radius=8)
-        pygame.draw.rect(self.screen, colors.BORDER, bg_rect, 2, border_radius=8)
+        draw_rounded_rect(self.screen, colors.BUTTON_GREY, bg_rect, border_radius=8, alpha=colors.PANEL_ALPHA)
+        pygame.draw.rect(self.screen, colors.PANEL_BORDER_GREY, bg_rect, 2, border_radius=8)
 
         # Draw text
         self.screen.blit(timer_surface, timer_rect)
@@ -592,16 +622,20 @@ class MainWindow:
     def _draw_info_button(self) -> None:
         """Draw circular info button."""
         if self.info_button_hovered:
-            bg_color = colors.HOVER
-            border_color = colors.ACCENT
+            bg_color = colors.BUTTON_HOVER_GREY
+            border_color = colors.PANEL_BORDER_GREY
         else:
-            bg_color = colors.PRIMARY
-            border_color = colors.BORDER
+            bg_color = colors.BUTTON_GREY
+            border_color = colors.PANEL_BORDER_GREY
 
         center = self.info_button_rect.center
         radius = self.info_button_rect.width // 2
-        pygame.draw.circle(self.screen, bg_color, center, radius)
-        pygame.draw.circle(self.screen, border_color, center, radius, 2)
+
+        # Draw transparent circle
+        temp_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(temp_surface, (*bg_color, colors.PANEL_ALPHA), (radius, radius), radius)
+        pygame.draw.circle(temp_surface, border_color, (radius, radius), radius, 2)
+        self.screen.blit(temp_surface, (center[0] - radius, center[1] - radius))
 
         i_text = self.font_medium.render("i", True, colors.TEXT)
         i_rect = i_text.get_rect(center=center)
