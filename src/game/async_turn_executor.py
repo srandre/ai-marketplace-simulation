@@ -128,10 +128,11 @@ class AsyncTurnExecutor:
                 summary_parts = []
 
                 if decision.get("trade"):
-                    target_id = decision.get("target_nation_id")
-                    target_nation = self.controller.game_state.get_nation(target_id) if target_id is not None else None
+                    target_name = decision.get("target_nation_name")
+                    target_nation = self.controller.game_state.get_nation_by_name(target_name) if target_name is not None else None
 
                     if target_nation:
+                        target_id = target_nation.id
                         summary_parts.append(f"proposes trade with {target_nation.name}")
                         self.status.set_action(f"{current_nation.name} is proposing a trade to {target_nation.name}...")
 
@@ -186,10 +187,13 @@ class AsyncTurnExecutor:
                             retry_trade = self.controller._request_alternative_trade(current_nation, trade_action)
 
                             if retry_trade:
-                                retry_target_id = retry_trade.get("target_nation_id")
-                                retry_target = self.controller.game_state.get_nation(retry_target_id) if retry_target_id is not None else None
+                                retry_target_name = retry_trade.get("target_nation_name")
+                                retry_target = self.controller.game_state.get_nation_by_name(retry_target_name) if retry_target_name is not None else None
 
                                 if retry_target:
+                                    retry_target_id = retry_target.id
+                                    # Add target_nation_id to retry_trade for _execute_trade_action
+                                    retry_trade["target_nation_id"] = retry_target_id
                                     self.status.set_action(f"{current_nation.name} proposing alternative trade to {retry_target.name}...")
                                     retry_result = self.controller._execute_trade_action(current_nation, retry_trade)
 

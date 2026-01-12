@@ -162,6 +162,13 @@ class GameState(BaseModel):
                 return nation
         return None
 
+    def get_nation_by_name(self, nation_name: str) -> Optional[Nation]:
+        """Get a nation by name."""
+        for nation in self.nations:
+            if nation.name == nation_name:
+                return nation
+        return None
+
     def advance_turn(self) -> None:
         """Advance to the next nation's turn."""
         self.current_nation_index += 1

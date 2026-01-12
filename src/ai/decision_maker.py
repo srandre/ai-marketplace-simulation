@@ -38,7 +38,7 @@ class DecisionMaker:
         decision_dict format:
         {
             "trade": true/false,
-            "target_nation_id": <id or null>,
+            "target_nation_name": "<nation name>" or null,
             "offering": {"GOLD": 100} or {"WOOD": 50, ...},
             "requesting": {"WOOD": 50, ...} or {"GOLD": 100},
             "reasoning": "..."
@@ -50,7 +50,7 @@ class DecisionMaker:
 
         default_decision = {
             "trade": False,
-            "target_nation_id": None,
+            "target_nation_name": None,
             "offering": {},
             "requesting": {},
             "reasoning": "Unable to process trading decision",
