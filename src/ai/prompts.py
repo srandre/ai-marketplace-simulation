@@ -485,11 +485,42 @@ BUILD PHASE
 Build ONE generator or skip.
 
 CRITICAL AFFORDABILITY CHECK (do this FIRST):
-1. Look at YOUR resources below
-2. Look at GENERATOR COSTS below
-3. Can you afford it? Check EACH resource requirement
-4. If you DON'T have enough → build: false, generator_type: null
-5. If you DO have enough → build: true, generator_type: "TYPE"
+
+Step 1: Look at YOUR RESOURCES (see "Current Resources" below)
+Step 2: Look at GENERATOR COSTS (see "GENERATOR COSTS (current prices)" section below)
+Step 3: For EACH generator in the list, check if you can afford it:
+
+HOW TO CHECK AFFORDABILITY:
+- Compare YOUR resources to what the generator costs
+- You need EVERY resource listed in the cost
+- Example: If QUARRY costs "40 WOOD", you need ≥40 WOOD
+- Example: If MINE costs "80 STONE + 80 WOOD", you need ≥80 STONE AND ≥80 WOOD (BOTH!)
+- Example: If FARM costs "80 WOOD OR 80 STONE", you need ≥80 of either one (not both)
+
+STEP-BY-STEP PROCESS:
+1. Look at first generator in GENERATOR COSTS list below
+2. Check: Do I have enough of EACH resource it requires?
+3. If YES → I CAN BUILD IT! Set build: true, generator_type: "NAME"
+4. If NO → Check next generator
+5. If none affordable → build: false, generator_type: null
+
+Example 1: I have WOOD=50, STONE=0, and QUARRY costs "40 WOOD"
+- QUARRY needs 40 WOOD → I have 50 WOOD → YES, I CAN BUILD QUARRY!
+
+Example 2: I have WOOD=50, STONE=0, and MINE costs "80 STONE + 80 WOOD"
+- MINE needs 80 STONE AND 80 WOOD → I only have 50 WOOD and 0 STONE → NO, CANNOT BUILD
+
+Example 3: I have WOOD=100, STONE=0, and FARM costs "80 WOOD OR 80 STONE"
+- FARM needs 80 WOOD OR 80 STONE → I have 100 WOOD → YES, I CAN BUILD FARM!
+
+⚠️ STOP! Before you skip building, read this:
+"I need to save resources for trading" = WRONG THINKING!
+Generators produce FOREVER. Trading gets you resources ONCE.
+If you can afford ANY generator, BUILD IT! The resources you spend come back next turn PLUS you have the generator forever.
+
+Example: You have 50 WOOD. QUARRY costs 40 WOOD.
+❌ BAD: "Skip building to save 50 WOOD for trading"
+✅ GOOD: "Build QUARRY! I'll have 10 WOOD left + 50 STONE/turn forever. I can trade the STONE next turn!"
 
 CRITICAL - REASONING MUST MATCH DECISION:
 - If reasoning says "cannot afford" → build MUST be false
@@ -501,10 +532,27 @@ RULES:
 - For FARM: specify payment_resource (WOOD or STONE)
 - For all others: payment_resource must be null
 
-STRATEGY:
-- What do I need for next era? (see requirements below)
-- Which generator produces what I need?
-- MINE produces GOLD (needed for all trades - prioritize if affordable)
+STRATEGY - BUILDING IS ESSENTIAL (THINK LONG-TERM):
+- Generators produce FOREVER - they pay back their cost in <1 turn, then infinite free resources!
+- Example: QUARRY costs 40 WOOD, produces 50 STONE/turn → Pays back in <1 turn, then FREE STONE FOREVER
+- DON'T hoard resources! Spending 40 WOOD to get 50 STONE/turn forever is ALWAYS worth it!
+- You can always trade to get more resources, but generators are permanent income!
+
+CRITICAL MATH:
+- If you have 50 WOOD and QUARRY costs 40 WOOD:
+  ✓ BUILD IT! You'll have 10 WOOD left + 50 STONE/turn starting next turn
+  ✗ DON'T skip to "save" the 50 WOOD - you're losing infinite STONE!
+
+Priority order when multiple options available:
+  1. MINE (produces GOLD - needed for ALL trades)
+  2. Generator that produces what you need for next era
+  3. Any other generator you can afford (free resources are always good!)
+
+WHAT TO BUILD:
+- Need GOLD for trading? → Build MINE (costs 5 WOOD + 5 STONE)
+- Need WOOD? → Build LUMBER_CAMP (costs 10 STONE)
+- Need STONE? → Build QUARRY (costs 10 WOOD)
+- Need FOOD? → Build FARM (costs 10 WOOD or 10 STONE)
 
 Respond with JSON (keep reasoning <=2 sentences):
 {{
