@@ -122,8 +122,8 @@ When a nation advances eras, all existing generators immediately update to the n
 ### Trading System
 
 **Valid Trade Structures:**
-- GOLD for resources (e.g., 50 GOLD → 50 WOOD + 30 STONE)
-- Resources for GOLD (e.g., 50 WOOD + 30 STONE → 50 GOLD)
+- GOLD for resource (e.g., 50 GOLD → 50 WOOD)
+- Resource for GOLD (e.g., 50 WOOD → 50 GOLD)
 
 **Trade Execution:**
 1. Initiator proposes trade
@@ -131,7 +131,15 @@ When a nation advances eras, all existing generators immediately update to the n
 3. If rejected, initiator may retry with different partner or end trading phase
 4. Both nations must possess offered resources for trade to execute
 
-Relationship values between nations adjust based on trade outcomes (+1 for successful trades, -1 for failed negotiations), and should influence AI's decisions on offering, accepting or rejecting trades.
+**Relationship System:**
+
+Nations maintain relationship scores with each other that influence trade acceptance probability:
+- All relationships start at 0 (neutral)
+- Successful trade: +1 relationship between both nations
+- Rejected trade: -1 relationship between both nations
+- Range: -100 to +100
+- Higher positive relationships increase trade acceptance likelihood
+- Nations are more willing to trade with partners they have successful trade history with
 
 ### AI Decision Framework
 

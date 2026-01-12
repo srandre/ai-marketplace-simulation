@@ -30,7 +30,12 @@ class TradingManager:
 
         if not offer.is_valid():
             # Log why the trade was invalid
-            print(f"Invalid trade offer from {initiator.name}: Trade must have one side with ONLY gold and the other side with NO gold")
+            offering_resources = [rt.value for rt, amt in offer.offering.items() if amt > 0]
+            requesting_resources = [rt.value for rt, amt in offer.requesting.items() if amt > 0]
+            print(f"[INVALID TRADE] {initiator.name} -> {responder.name}")
+            print(f"  Offering: {', '.join(offering_resources) if offering_resources else 'nothing'}")
+            print(f"  Requesting: {', '.join(requesting_resources) if requesting_resources else 'nothing'}")
+            print(f"  REASON: Trade must be GOLD for ONE resource OR ONE resource for GOLD (no multiple resources allowed)")
             return None
 
         # Check if initiator has the resources they're offering

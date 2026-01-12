@@ -19,8 +19,9 @@ class TradeOffer(BaseModel):
 
         Rules:
         - Must have both offering and requesting items
-        - One side must have ONLY gold
-        - The other side must have resources (but NOT gold)
+        - One side must have ONLY gold (exactly one resource: GOLD)
+        - The other side must have exactly ONE non-gold resource
+        - No side can have multiple resources
         """
         has_offering = any(amount > 0 for amount in self.offering.values())
         has_requesting = any(amount > 0 for amount in self.requesting.values())
@@ -28,21 +29,23 @@ class TradeOffer(BaseModel):
         if not (has_offering and has_requesting):
             return False
 
-        # Check gold-only rule
+        # Get resources with positive amounts
         offering_resources = [rt for rt, amt in self.offering.items() if amt > 0]
         requesting_resources = [rt for rt, amt in self.requesting.items() if amt > 0]
 
-        # One side must be ONLY gold
-        offering_is_only_gold = (len(offering_resources) == 1 and
-                                  offering_resources[0] == ResourceType.GOLD)
-        requesting_is_only_gold = (len(requesting_resources) == 1 and
-                                    requesting_resources[0] == ResourceType.GOLD)
+        # Both sides must have EXACTLY one resource type
+        if len(offering_resources) != 1 or len(requesting_resources) != 1:
+            return False
 
-        # The other side must NOT contain gold
+        # One side must be ONLY gold
+        offering_is_only_gold = offering_resources[0] == ResourceType.GOLD
+        requesting_is_only_gold = requesting_resources[0] == ResourceType.GOLD
+
+        # The other side must NOT be gold
         offering_has_gold = ResourceType.GOLD in offering_resources
         requesting_has_gold = ResourceType.GOLD in requesting_resources
 
-        # Valid if one side is only gold and the other doesn't have gold
+        # Valid if one side is only gold and the other is not gold
         if offering_is_only_gold and not requesting_has_gold:
             return True
         if requesting_is_only_gold and not offering_has_gold:
