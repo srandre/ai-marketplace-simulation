@@ -390,25 +390,29 @@ MANDATORY DECISION PROCESS (DO NOT SKIP ANY STEP):
 Step 1: Look at "OTHER NATIONS" list below
 Step 2: Find nations that HAVE the resource I want to REQUEST
 Step 3: Pick ONE nation from that list
-Step 4: Write reasoning using THAT EXACT nation name
-Step 5: Set target_nation_name to THAT EXACT SAME name
+Step 4: VERIFY that nation has what you're requesting (CRITICAL!)
+Step 5: Write reasoning mentioning EXACTLY what they have AND what you're requesting
+Step 6: Set target_nation_name to THAT EXACT SAME name
 
 EXAMPLE:
 - I want GOLD
 - I see: "• Portugal HAS: GOLD=50"
-- I write reasoning: "Portugal has GOLD=50. Selling WOOD to Portugal."
+- VERIFY: Portugal HAS GOLD ✓
+- I write reasoning: "Selling WOOD to Portugal for GOLD=50."
 - I set: "target_nation_name": "Portugal"
+- I set: "requesting": {{"GOLD": 50}}
 
-WARNING: The nation name in reasoning MUST EXACTLY match target_nation_name!
+CRITICAL: If reasoning says "Germany has STONE" but you request GOLD, the trade WILL FAIL!
+Your reasoning MUST mention the EXACT resource you're requesting from them!
 DO NOT mention one nation in reasoning and put a different nation in target_nation_name!
 
-Respond with JSON:
+Respond with JSON (reasoning: 2 sentences):
 {{
+    "reasoning": "Selling WOOD to Portugal for GOLD=50.",
     "trade": true/false,
     "target_nation_name": "Portugal",
     "offering": {{"WOOD": 50}},
-    "requesting": {{"GOLD": 50}},
-    "reasoning": "Portugal has GOLD=50. Selling WOOD to Portugal."
+    "requesting": {{"GOLD": 50}}
 }}
 
 ________________________________________________________________________________
@@ -548,12 +552,12 @@ WHAT TO BUILD:
 - Need STONE? -> Build QUARRY (costs 10 WOOD)
 - Need FOOD? -> Build FARM (costs 10 WOOD or 10 STONE)
 
-Respond with JSON (keep reasoning <=2 sentences):
+Respond with JSON (reasoning: 2 sentences):
 {{
+    "reasoning": "What I have, what it costs, decision." (this should ABSOLUTELY match what's answered in the other properties),
     "build": true/false,
     "generator_type": "LUMBER_CAMP" | "QUARRY" | "FARM" | "MINE" | "FACTORY" | "DATACENTER" | null,
-    "payment_resource": "WOOD" | "STONE" | null (for FARM only),
-    "reasoning": "What I have, what it costs, decision." (this should ABSOLUTELY match what's answered in the other properties)
+    "payment_resource": "WOOD" | "STONE" | null (for FARM only)
 }}
 
 ________________________________________________________________________________
@@ -632,10 +636,10 @@ Only REJECT if:
 - You don't have what they request, OR
 - You can't spare it (need for era requirements) and don't have a generator for it (you won't get it back)
 
-Respond with JSON (keep reasoning <=2 sentences):
+Respond with JSON (reasoning: 2 sentences):
 {{
-    "decision": "ACCEPT" | "REJECT",
-    "reasoning": "They request X. I have [amount] and [GENERATOR]. Accepting/Rejecting." (this should ABSOLUTELY match what's answered in the other properties)
+    "reasoning": "They request X. I have [amount] and [GENERATOR]. Accepting/Rejecting." (this should ABSOLUTELY match what's answered in the other properties),
+    "decision": "ACCEPT" | "REJECT"
 }}
 
 ________________________________________________________________________________
@@ -733,24 +737,28 @@ MANDATORY DECISION PROCESS:
 Step 1: Look at "ALTERNATIVE PARTNERS" list below
 Step 2: Find nations that HAVE the resource I want to REQUEST
 Step 3: Pick ONE nation from that list
-Step 4: Write reasoning using THAT EXACT nation name
-Step 5: Set target_nation_name to THAT EXACT SAME name
+Step 4: VERIFY that nation has what you're requesting (CRITICAL!)
+Step 5: Write reasoning mentioning EXACTLY what you're requesting from them
+Step 6: Set target_nation_name to THAT EXACT SAME name
 
 EXAMPLE:
 - I want GOLD
 - I see: "• France HAS: GOLD=50"
-- I write reasoning: "France has GOLD=50. Retrying with France."
+- VERIFY: France HAS GOLD ✓
+- I write reasoning: "Retrying with France for GOLD=50."
 - I set: "target_nation_name": "France"
+- I set: "requesting": {{"GOLD": 50}}
 
+CRITICAL: Your reasoning MUST mention the resource you're requesting!
 WARNING: The nation name in reasoning MUST EXACTLY match target_nation_name!
 
-Respond with JSON:
+Respond with JSON (reasoning: 2 sentences):
 {{
+    "reasoning": "Retrying with France for GOLD=50.",
     "retry": true/false,
     "target_nation_name": "France",
     "offering": {{"WOOD": 50}},
-    "requesting": {{"GOLD": 50}},
-    "reasoning": "France has GOLD=50. Retrying with France."
+    "requesting": {{"GOLD": 50}}
 }}
 
 ________________________________________________________________________________

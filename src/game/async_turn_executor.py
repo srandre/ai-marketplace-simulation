@@ -177,6 +177,15 @@ class AsyncTurnExecutor:
                             trade_summaries.append(f"traded with {target_nation.name}")
                         elif result == "INVALID":
                             # Invalid trade - could be initiator or target lacks resources
+                            # Add visible log entry for invalid trade
+                            self.controller.game_state.game_log.add_entry(
+                                log_type=LogType.TRADE_REJECTED,
+                                turn_number=self.controller.game_state.turn_number,
+                                round_number=self.controller.game_state.round_number,
+                                summary=f"{current_nation.name} trade invalid with {target_nation.name}",
+                                nations_involved=[current_nation.id, target_id],
+                                details={"reason": "Insufficient resources or invalid offer"}
+                            )
                             trade_summaries.append(f"trade failed: insufficient resources")
                             print(f"[WARNING] {current_nation.name} proposed invalid trade to {target_nation.name} (insufficient resources)")
                         elif result == "REJECTED":
@@ -202,6 +211,17 @@ class AsyncTurnExecutor:
                                         trade_summaries.append(f"then traded with {retry_target.name}")
                                     elif retry_result == "REJECTED":
                                         trade_summaries.append(f"retry rejected by {retry_target.name}")
+                                    elif retry_result == "INVALID":
+                                        # Add visible log entry for invalid retry trade
+                                        self.controller.game_state.game_log.add_entry(
+                                            log_type=LogType.TRADE_REJECTED,
+                                            turn_number=self.controller.game_state.turn_number,
+                                            round_number=self.controller.game_state.round_number,
+                                            summary=f"{current_nation.name} retry trade invalid with {retry_target.name}",
+                                            nations_involved=[current_nation.id, retry_target_id],
+                                            details={"reason": "Insufficient resources or invalid offer"}
+                                        )
+                                        trade_summaries.append(f"retry invalid")
                                     else:
                                         trade_summaries.append(f"retry {retry_result.lower()}")
                             else:
