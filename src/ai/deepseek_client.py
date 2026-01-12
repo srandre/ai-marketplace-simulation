@@ -97,7 +97,6 @@ class DeepSeekClient:
         }
 
         try:
-            print(f"  Making API call to DeepSeek (timeout: {self.timeout}s)...")
             response = requests.post(
                 self.base_url,
                 headers=headers,
@@ -107,7 +106,6 @@ class DeepSeekClient:
 
             response.raise_for_status()
             data = response.json()
-            print(f"  API call successful!")
 
             # Extract the assistant's message
             if "choices" in data and len(data["choices"]) > 0:

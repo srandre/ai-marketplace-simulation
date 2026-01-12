@@ -318,14 +318,11 @@ class MainWindow:
                 import time
                 self.game_start_time = time.time()
 
-            print(f"\n{'='*60}")
-            print(f"Queuing Turn {self.controller.game_state.turn_number}")
-            print(f"{'='*60}")
             self.turn_executor.execute_turn_async()
 
     def _on_turn_complete(self) -> None:
         """Called when turn execution completes."""
-        print(f"Turn {self.controller.game_state.turn_number} complete\n")
+        pass
 
     def handle_events(self) -> None:
         """Handle pygame events."""

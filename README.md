@@ -210,7 +210,7 @@ era_advancement:
 ai:
   provider: "deepseek"
   model: "deepseek-chat"
-  temperature: 0.9          # Randomness (0.0-2.0)
+  temperature: 0.0
   max_tokens: 1500
   timeout_seconds: 30
 ```
