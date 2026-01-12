@@ -82,7 +82,7 @@ def create_system_prompt(generator_manager: "GeneratorManager") -> str:
             # Mark final era as WIN
             win_suffix = " = WIN" if i + 1 == len(eras_sorted) - 1 else ""
             advancement_lines.append(
-                f"- Era {era.get('index')} → Era {next_era.get('index')} ({next_era_name_short}{win_suffix}): {reqs_text}"
+                f"- Era {era.get('index')} -> Era {next_era.get('index')} ({next_era_name_short}{win_suffix}): {reqs_text}"
             )
 
     advancement_text = "\n".join(advancement_lines)
@@ -291,7 +291,7 @@ def create_trading_phase_prompt(
     for g in nation.generators:
         gen_type = g.generator_type.value
         produces = g.produces.value
-        your_gen_parts.append(f"{gen_type} → {produces} next turn")
+        your_gen_parts.append(f"{gen_type} -> {produces} next turn")
 
     if your_gen_parts:
         your_generators = ", ".join(your_gen_parts)
@@ -302,7 +302,7 @@ def create_trading_phase_prompt(
     goal_parts = []
     for res, amt in era_requirements.items():
         current = nation.inventory.get(res)
-        status = "✓" if current >= amt else "✗"
+        status = "[OK]" if current >= amt else "[X]"
         goal_parts.append(f"{res}={amt} {status}")
     goal_str = ", ".join(goal_parts)
 
@@ -345,47 +345,47 @@ TRADING RULES:
 - Other side offers ONLY resources (can be multiple: WOOD, STONE, FOOD, etc.)
 - NEVER mix gold with resources on the same side
 - Examples:
-  ✓ Offer GOLD → Request WOOD (BUY)
-  ✓ Offer GOLD → Request WOOD + STONE (BUY bundle)
-  ✓ Offer WOOD + STONE → Request GOLD (SELL bundle)
-  ✗ Offer GOLD + WOOD → anything (can't mix gold with resources)
-  ✗ Offer WOOD → Request STONE (one side MUST be GOLD)
+  OK: Offer GOLD -> Request WOOD (BUY)
+  OK: Offer GOLD -> Request WOOD + STONE (BUY bundle)
+  OK: Offer WOOD + STONE -> Request GOLD (SELL bundle)
+  INVALID: Offer GOLD + WOOD -> anything (can't mix gold with resources)
+  INVALID: Offer WOOD -> Request STONE (one side MUST be GOLD)
 
 CRITICAL - VERIFY RESOURCES BEFORE TRADING:
-GENERATOR ≠ HAVING THE RESOURCE RIGHT NOW!
+GENERATOR != HAVING THE RESOURCE RIGHT NOW!
 
-When BUYING (you offer GOLD → request RESOURCES):
+When BUYING (you offer GOLD -> request RESOURCES):
 1. Check YOUR resources: Do I have enough GOLD?
 2. Check TARGET's resources: Does target have enough WOOD/STONE/FOOD?
-3. Example: Indonesia has LUMBER_CAMP but resources.WOOD = 0 → CANNOT buy WOOD (trade fails!)
+3. Example: Indonesia has LUMBER_CAMP but resources.WOOD = 0 -> CANNOT buy WOOD (trade fails!)
 
-When SELLING (you offer RESOURCES → request GOLD):
+When SELLING (you offer RESOURCES -> request GOLD):
 1. Check YOUR resources: Do I have enough WOOD/STONE/FOOD?
 2. Check TARGET's resources: Does target have enough GOLD?
-3. Example: Egypt has MINE but resources.GOLD = 0 → CANNOT sell to Egypt (trade fails!)
+3. Example: Egypt has MINE but resources.GOLD = 0 -> CANNOT sell to Egypt (trade fails!)
 
 TARGET NATIONS WITH GENERATORS (Secondary consideration):
 Nations with generators are MORE LIKELY to accept, but ONLY if they have the resource NOW:
-- Target has MINE + has GOLD in resources? → Good target (will regenerate)
-- Target has LUMBER_CAMP + has WOOD in resources? → Good target (will regenerate)
-- Target has QUARRY + has STONE in resources? → Good target (will regenerate)
-- Target has FARM + has FOOD in resources? → Good target (will regenerate)
+- Target has MINE + has GOLD in resources? -> Good target (will regenerate)
+- Target has LUMBER_CAMP + has WOOD in resources? -> Good target (will regenerate)
+- Target has QUARRY + has STONE in resources? -> Good target (will regenerate)
+- Target has FARM + has FOOD in resources? -> Good target (will regenerate)
 
 CRITICAL - DON'T REPEAT FAILED TRADES:
 - Check "YOUR PREVIOUS DECISIONS" section
-- If you see "Outcome: Trade invalid" → That nation lacks resources!
+- If you see "Outcome: Trade invalid" -> That nation lacks resources!
 - DON'T propose the same trade again to the same nation
 - Try a DIFFERENT nation or DIFFERENT resources
 
 CRITICAL - DON'T DOUBLE-SPEND YOUR RESOURCES:
 - If you already traded in this turn, your resources have changed!
 - Check "your_nation.resources" carefully - these are your CURRENT resources
-- Example: You had 100 GOLD, spent 50 on first trade → Now you have 50 GOLD
+- Example: You had 100 GOLD, spent 50 on first trade -> Now you have 50 GOLD
 - DON'T try to spend the same resources twice!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================================================
 MANDATORY DECISION PROCESS (DO NOT SKIP ANY STEP):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================================================
 
 Step 1: Look at "OTHER NATIONS" list below
 Step 2: Find nations that HAVE the resource I want to REQUEST
@@ -399,8 +399,8 @@ EXAMPLE:
 - I write reasoning: "Portugal has GOLD=50. Selling WOOD to Portugal."
 - I set: "target_nation_name": "Portugal"
 
-⚠️ WARNING: The nation name in reasoning MUST EXACTLY match target_nation_name!
-⚠️ DO NOT mention one nation in reasoning and put a different nation in target_nation_name!
+WARNING: The nation name in reasoning MUST EXACTLY match target_nation_name!
+DO NOT mention one nation in reasoning and put a different nation in target_nation_name!
 
 Respond with JSON:
 {{
@@ -426,7 +426,7 @@ OTHER NATIONS (Check what they HAVE right now):
 ________________________________________________________________________________
 {other_nations_str}
 
-⚠️ CRITICAL: Only these resources listed above are available for trading RIGHT NOW!
+CRITICAL: Only these resources listed above are available for trading RIGHT NOW!
 
 {memory_context}
 {complement_note}
@@ -446,14 +446,14 @@ def create_build_phase_prompt(
     your_res = _format_resources_natural(nation.inventory.to_dict())
     your_gens = []
     for g in nation.generators:
-        your_gens.append(f"{g.generator_type.value} (→{g.generation_amount} {g.produces.value}/turn)")
+        your_gens.append(f"{g.generator_type.value} (->{g.generation_amount} {g.produces.value}/turn)")
     your_gens_str = ", ".join(your_gens) if your_gens else "None"
 
     # Format goal
     goal_parts = []
     for res, amt in era_requirements.items():
         current = nation.inventory.get(res)
-        status = "✓" if current >= amt else "✗"
+        status = "[OK]" if current >= amt else "[X]"
         goal_parts.append(f"{res}={amt} {status}")
     goal_str = ", ".join(goal_parts)
 
@@ -487,39 +487,39 @@ Step 3: For EACH generator in the list, check if you can afford it:
 HOW TO CHECK AFFORDABILITY:
 - Compare YOUR resources to what the generator costs
 - You need EVERY resource listed in the cost
-- Example: If QUARRY costs "40 WOOD", you need ≥40 WOOD
-- Example: If MINE costs "80 STONE + 80 WOOD", you need ≥80 STONE AND ≥80 WOOD (BOTH!)
-- Example: If FARM costs "80 WOOD OR 80 STONE", you need ≥80 of either one (not both)
+- Example: If QUARRY costs "40 WOOD", you need >=40 WOOD
+- Example: If MINE costs "80 STONE + 80 WOOD", you need >=80 STONE AND >=80 WOOD (BOTH!)
+- Example: If FARM costs "80 WOOD OR 80 STONE", you need >=80 of either one (not both)
 
 STEP-BY-STEP PROCESS:
 1. Look at first generator in GENERATOR COSTS list below
 2. Check: Do I have enough of EACH resource it requires?
-3. If YES → I CAN BUILD IT! Set build: true, generator_type: "NAME"
-4. If NO → Check next generator
-5. If none affordable → build: false, generator_type: null
+3. If YES -> I CAN BUILD IT! Set build: true, generator_type: "NAME"
+4. If NO -> Check next generator
+5. If none affordable -> build: false, generator_type: null
 
 Example 1: I have WOOD=50, STONE=0, and QUARRY costs "40 WOOD"
-- QUARRY needs 40 WOOD → I have 50 WOOD → YES, I CAN BUILD QUARRY!
+- QUARRY needs 40 WOOD -> I have 50 WOOD -> YES, I CAN BUILD QUARRY!
 
 Example 2: I have WOOD=50, STONE=0, and MINE costs "80 STONE + 80 WOOD"
-- MINE needs 80 STONE AND 80 WOOD → I only have 50 WOOD and 0 STONE → NO, CANNOT BUILD
+- MINE needs 80 STONE AND 80 WOOD -> I only have 50 WOOD and 0 STONE -> NO, CANNOT BUILD
 
 Example 3: I have WOOD=100, STONE=0, and FARM costs "80 WOOD OR 80 STONE"
-- FARM needs 80 WOOD OR 80 STONE → I have 100 WOOD → YES, I CAN BUILD FARM!
+- FARM needs 80 WOOD OR 80 STONE -> I have 100 WOOD -> YES, I CAN BUILD FARM!
 
-⚠️ STOP! Before you skip building, read this:
+STOP! Before you skip building, read this:
 "I need to save resources for trading" = WRONG THINKING!
 Generators produce FOREVER. Trading gets you resources ONCE.
 If you can afford ANY generator, BUILD IT! The resources you spend come back next turn PLUS you have the generator forever.
 
 Example: You have 50 WOOD. QUARRY costs 40 WOOD.
-❌ BAD: "Skip building to save 50 WOOD for trading"
-✅ GOOD: "Build QUARRY! I'll have 10 WOOD left + 50 STONE/turn forever. I can trade the STONE next turn!"
+BAD: "Skip building to save 50 WOOD for trading"
+GOOD: "Build QUARRY! I'll have 10 WOOD left + 50 STONE/turn forever. I can trade the STONE next turn!"
 
 CRITICAL - REASONING MUST MATCH DECISION:
-- If reasoning says "cannot afford" → build MUST be false
-- If reasoning says "building" → build MUST be true
-- If reasoning says "skipping" → build MUST be false
+- If reasoning says "cannot afford" -> build MUST be false
+- If reasoning says "building" -> build MUST be true
+- If reasoning says "skipping" -> build MUST be false
 - NO contradictions allowed!
 
 RULES:
@@ -528,14 +528,14 @@ RULES:
 
 STRATEGY - BUILDING IS ESSENTIAL (THINK LONG-TERM):
 - Generators produce FOREVER - they pay back their cost in <1 turn, then infinite free resources!
-- Example: QUARRY costs 40 WOOD, produces 50 STONE/turn → Pays back in <1 turn, then FREE STONE FOREVER
+- Example: QUARRY costs 40 WOOD, produces 50 STONE/turn -> Pays back in <1 turn, then FREE STONE FOREVER
 - DON'T hoard resources! Spending 40 WOOD to get 50 STONE/turn forever is ALWAYS worth it!
 - You can always trade to get more resources, but generators are permanent income!
 
 CRITICAL MATH:
 - If you have 50 WOOD and QUARRY costs 40 WOOD:
-  ✓ BUILD IT! You'll have 10 WOOD left + 50 STONE/turn starting next turn
-  ✗ DON'T skip to "save" the 50 WOOD - you're losing infinite STONE!
+  BUILD IT! You'll have 10 WOOD left + 50 STONE/turn starting next turn
+  DON'T skip to "save" the 50 WOOD - you're losing infinite STONE!
 
 Priority order when multiple options available:
   1. MINE (produces GOLD - needed for ALL trades)
@@ -543,10 +543,10 @@ Priority order when multiple options available:
   3. Any other generator you can afford (free resources are always good!)
 
 WHAT TO BUILD:
-- Need GOLD for trading? → Build MINE (costs 5 WOOD + 5 STONE)
-- Need WOOD? → Build LUMBER_CAMP (costs 10 STONE)
-- Need STONE? → Build QUARRY (costs 10 WOOD)
-- Need FOOD? → Build FARM (costs 10 WOOD or 10 STONE)
+- Need GOLD for trading? -> Build MINE (costs 5 WOOD + 5 STONE)
+- Need WOOD? -> Build LUMBER_CAMP (costs 10 STONE)
+- Need STONE? -> Build QUARRY (costs 10 WOOD)
+- Need FOOD? -> Build FARM (costs 10 WOOD or 10 STONE)
 
 Respond with JSON (keep reasoning <=2 sentences):
 {{
@@ -588,7 +588,7 @@ def create_trade_response_prompt(
     your_res = _format_resources_natural(nation.inventory.to_dict())
     your_gens = []
     for g in nation.generators:
-        your_gens.append(f"{g.generator_type.value} (→{g.generation_amount} {g.produces.value}/turn)")
+        your_gens.append(f"{g.generator_type.value} (->{g.generation_amount} {g.produces.value}/turn)")
     your_gens_str = ", ".join(your_gens) if your_gens else "None"
 
     # Format what they're offering and requesting
@@ -608,7 +608,7 @@ They request from you: {requesting_str}
 
 RULES:
 - You MUST have what they request (check your current resources below)
-- If you lack ANY requested resource → REJECT
+- If you lack ANY requested resource -> REJECT
 - Resources are ALWAYS useful (for future eras, generators, other trades)
 
 CRITICAL - WHEN TO ACCEPT:
@@ -621,12 +621,12 @@ Check YOUR generators (see below):
 - DATACENTER produces INFORMATION
 
 ACCEPT if you have a generator for what they request!
-- They want GOLD and you have MINE? → ACCEPT (you'll regenerate GOLD next turn)
-- They want WOOD and you have LUMBER_CAMP? → ACCEPT (you'll regenerate WOOD next turn)
-- They want STONE and you have QUARRY? → ACCEPT (you'll regenerate STONE next turn)
-- They want FOOD and you have FARM? → ACCEPT (you'll regenerate FOOD next turn)
-- They want TECHNOLOGY and you have FACTORY? → ACCEPT (you'll regenerate TECHNOLOGY next turn)
-- They want INFORMATION and you have DATACENTER? → ACCEPT (you'll regenerate INFORMATION next turn)
+- They want GOLD and you have MINE? -> ACCEPT (you'll regenerate GOLD next turn)
+- They want WOOD and you have LUMBER_CAMP? -> ACCEPT (you'll regenerate WOOD next turn)
+- They want STONE and you have QUARRY? -> ACCEPT (you'll regenerate STONE next turn)
+- They want FOOD and you have FARM? -> ACCEPT (you'll regenerate FOOD next turn)
+- They want TECHNOLOGY and you have FACTORY? -> ACCEPT (you'll regenerate TECHNOLOGY next turn)
+- They want INFORMATION and you have DATACENTER? -> ACCEPT (you'll regenerate INFORMATION next turn)
 
 Only REJECT if:
 - You don't have what they request, OR
@@ -710,25 +710,25 @@ def create_alternative_trade_prompt(
 OPTIONS:
 1. Try SAME trade with different partner
 2. Try DIFFERENT trade with different partner
-3. Skip (retry: false) → ends trading phase
+3. Skip (retry: false) -> ends trading phase
 
 CRITICAL: Check "resources" field, NOT "generators" field!
 - Generators produce NEXT turn, not now
-- If nation has LUMBER_CAMP but resources.WOOD = 0 → they have NO WOOD now!
+- If nation has LUMBER_CAMP but resources.WOOD = 0 -> they have NO WOOD now!
 
 CRITICAL - DON'T DOUBLE-SPEND:
 - Your resources shown above are CURRENT (after first trade)
-- Example: You spent 50 GOLD on first trade → resources now shows remaining GOLD
+- Example: You spent 50 GOLD on first trade -> resources now shows remaining GOLD
 - DON'T try to offer resources you already spent!
 
 TRADING RULES:
 - One side ONLY GOLD, other side ONLY resources (can be multiple)
 - NEVER mix gold with resources on same side
-- Examples: ✓ GOLD for WOOD+STONE  ✓ WOOD+STONE for GOLD  ✗ GOLD+WOOD for anything
+- Examples: OK: GOLD for WOOD+STONE  OK: WOOD+STONE for GOLD  INVALID: GOLD+WOOD for anything
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================================================
 MANDATORY DECISION PROCESS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================================================
 
 Step 1: Look at "ALTERNATIVE PARTNERS" list below
 Step 2: Find nations that HAVE the resource I want to REQUEST
@@ -742,7 +742,7 @@ EXAMPLE:
 - I write reasoning: "France has GOLD=50. Retrying with France."
 - I set: "target_nation_name": "France"
 
-⚠️ WARNING: The nation name in reasoning MUST EXACTLY match target_nation_name!
+WARNING: The nation name in reasoning MUST EXACTLY match target_nation_name!
 
 Respond with JSON:
 {{
